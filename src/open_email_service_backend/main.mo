@@ -5,26 +5,17 @@ import ProfileType "domains/profiles/Types";
 
 actor {
 
-
   stable var stable_profile:[(Principal,ProfileType.Profile)] = [];
 
-  let profileService=ProfileLogic.Service();
+  let profileService=ProfileLogic.ProfileManager();
 
   //update or create profile
-  public shared ({caller}) func setProfile(name:Text, surname:Text, description:?Text):async ProfileType.ProfileResult{
-
-     let profile ={
-            id=Principal.toText(caller);
-            name=name;
-            surname;
-            description;
-      };
-
-    profileService.setProfile(caller,profile);
+  public shared ({caller}) func createProfile(profile:ProfileType.CreateProfileDTO):async ProfileType.ProfileResult{
+    profileService.createProfile(caller,profile);
   };
 
   // return result should be in main
-  public shared({caller}) func getProfile():async Result.Result<ProfileType.Profile,ProfileType.ProfileError>{
+  public shared({caller}) func getProfile(): async Result.Result<ProfileType.Profile,ProfileType.ProfileError>{
     profileService.getProfile(caller);
   };
 

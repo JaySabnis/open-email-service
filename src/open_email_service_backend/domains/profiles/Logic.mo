@@ -3,27 +3,32 @@ import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
 import TrieMap "mo:base/TrieMap";
 import Result "mo:base/Result";
+import Text "mo:base/Text";
+import Time "mo:base/Time";
 
 import T "Types";
 
 module{
 
-    public class Service(){
+    public class ProfileManager(){
 
         //hashmap <Principal, Profile>
-        var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
-   
-        // Create or update profile
+        private var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
+       
+        let now:T.Timestamp = Time.now(); // get time stamp
 
-        public func setProfile( caller : Principal, profile : T.Profile ) : T.ProfileResult {
+
+        //create profile
+
+        public func createProfile( caller : Principal, profileDTO : T.CreateProfileDTO ) : T.ProfileResult {
             
             //validate data
-            if(profile.name.size()==0 or profile.surname.size()==0){
+            if(profileDTO.name.size()==0 or profileDTO.surname.size()==0){
                 return #err(#InvalidData("Name or surname cannot be empty"));
             };
             
             //validate description
-            switch(profile.description){
+            switch(profileDTO.description){
                 
                 case(?text) if (text.size() > 1000){
                     return #err(#InvalidData("Description should not exceed 1000 characters!."));
@@ -31,13 +36,37 @@ module{
 
                 case _ {};   
             };
-            
-            profiles.put(caller,profile);
-           #ok;
+
+            //check if userAddresses has already registered the username
+            let ifUserAddressExist=profiles.get(caller);
+
+        
+            switch(ifUserAddressExist) {
+               
+                case(?ifUserAddressExist) { 
+                     return #err(#AlreadyExists("User with this id already exist!."));
+                 };    
+                
+                case(null) {
+                    let saveProfile : T.Profile = {
+                                        id=Principal.toText(caller);
+                                        name=profileDTO.name;
+                                        surname=profileDTO.surname;
+                                        userAddress=profileDTO.userAddress;
+                                        status=profileDTO.status;
+                                        description=profileDTO.description;
+                                        profileImage=profileDTO.profileImage;
+                                        createdOn=now;
+                                    };
+                    profiles.put(caller,saveProfile);
+                     
+                    return #ok;   
+                };
+            };   
         };
 
         //Get Profile
-        public func getProfile(caller:Principal) : Result.Result<T.Profile,T.ProfileError>{
+        public func getProfile(caller:Principal) :  Result.Result<T.Profile,T.ProfileError>{
             let result = profiles.get(caller);
             switch(result){
                 case (?profile) {
