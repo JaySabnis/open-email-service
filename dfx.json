@@ -1,0 +1,29 @@
+{
+  "canisters": {
+    "open_email_service_backend": {
+      "declarations": {
+        "node_compatibility": true
+      },
+      "main": "src/open_email_service_backend/main.mo",
+      "type": "motoko"
+    },
+    "open_email_service_frontend": {
+      "dependencies": [
+        "open_email_service_backend"
+      ],
+      "source": [
+        "src/open_email_service_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "open_email_service_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
