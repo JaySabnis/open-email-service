@@ -1,6 +1,6 @@
 {
   "canisters": {
-    "open_email_service_backend": {
+    "backend": {
       "declarations": {
         "node_compatibility": true
       },
