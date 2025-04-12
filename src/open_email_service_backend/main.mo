@@ -9,9 +9,14 @@ actor {
 
   let profileService=ProfileLogic.ProfileManager();
 
-  //update or create profile
+  //create profile
   public shared ({caller}) func createProfile(profile:ProfileType.CreateProfileDTO):async ProfileType.ProfileResult{
     profileService.createProfile(caller,profile);
+  };
+
+    //update  profile
+  public shared ({caller}) func updateProfile(profile:ProfileType.UpdateProfileDTO):async Result.Result<ProfileType.Profile,ProfileType.ProfileError>{
+    profileService.updateProfile(caller,profile);
   };
 
   // return result should be in main
