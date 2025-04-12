@@ -5,6 +5,8 @@ import TrieMap "mo:base/TrieMap";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
+import Option "mo:base/Option";
+import Blob "mo:base/Blob";
 
 import T "Types";
 
@@ -57,6 +59,7 @@ module{
                                         description=profileDTO.description;
                                         profileImage=profileDTO.profileImage;
                                         createdOn=now;
+                                        modifiedOn=now;
                                     };
                     profiles.put(caller,saveProfile);
                      
@@ -64,6 +67,37 @@ module{
                 };
             };   
         };
+
+
+    
+        public func updateProfile(caller : Principal, profileDTO : T.UpdateProfileDTO) : Result.Result<T.Profile, T.ProfileError> {
+            let savedProfile = profiles.get(caller);
+            switch (savedProfile) {
+                case (?profile) {
+
+                    let updatedProfile : T.Profile = {
+                        id = profile.id;
+                        name = Option.get(profileDTO.name, profile.name);
+                        surname = Option.get(profileDTO.surname, profile.surname);
+                        userAddress = profile.userAddress;
+                        status = ?Option.get(profileDTO.status, "");
+                        description = ?Option.get(profileDTO.description, "");
+                        profileImage = ?Option.get(profileDTO.profileImage,Blob.fromArray([]));
+                        createdOn = profile.createdOn;
+                        modifiedOn=now;
+                    };
+
+                    profiles.put(caller,updatedProfile);
+                    return #ok(updatedProfile);
+                };
+                
+                case (null) {
+                    return #err(#NotFound);
+                };
+            };
+
+        };
+
 
         //Get Profile
         public func getProfile(caller:Principal) :  Result.Result<T.Profile,T.ProfileError>{
@@ -77,6 +111,7 @@ module{
                 };
             };
         };
+
 
         //Delete Profile
         public func deleteProfile(caller:Principal) : T.ProfileResult{
