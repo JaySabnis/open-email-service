@@ -1,5 +1,4 @@
 import Principal "mo:base/Principal";
-import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
 import TrieMap "mo:base/TrieMap";
 import Result "mo:base/Result";
@@ -8,6 +7,7 @@ import Time "mo:base/Time";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 
+
 import T "Types";
 
 module{
@@ -15,13 +15,11 @@ module{
     public class ProfileManager(){
 
         //hashmap <Principal, Profile>
-        private var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
+        public var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
        
         let now:T.Timestamp = Time.now(); // get time stamp
 
-
         //create profile
-
         public func createProfile( caller : Principal, profileDTO : T.CreateProfileDTO ) : T.ProfileResult {
             
             //validate data
@@ -42,7 +40,6 @@ module{
             //check if userAddresses has already registered the username
             let ifUserAddressExist=profiles.get(caller);
 
-        
             switch(ifUserAddressExist) {
                
                 case(?ifUserAddressExist) { 
@@ -113,11 +110,34 @@ module{
         };
 
 
+        //Get Principal Id using userAddress
+        public func getPrincipalId(userAddress:Text):?Principal{
+            for((principal,profile) in profiles.entries()){
+                if(profile.userAddress==userAddress){
+                    return ?principal;
+                };      
+            };
+            return null;
+
+        };
+
+
+        //Get Principal Id using userAddress
+        public func getUserAddress(caller:Principal) : ?Text{
+            let profile=profiles.get(caller);
+            switch(profile){
+                case(?profile) ?profile.userAddress;
+                case(null) null;
+            };     
+        };
+
+
         //Delete Profile
         public func deleteProfile(caller:Principal) : T.ProfileResult{
             profiles.delete(caller);
             return #ok;
         };
+
 
         public func setStableProfile(stableProfile:[(Principal,T.Profile)]):(){
             
@@ -128,6 +148,7 @@ module{
             };
             profiles:=temp_profiles;
         };
+
 
         public func getStableProfiles():[(Principal,T.Profile)]{
             return Iter.toArray(profiles.entries());
