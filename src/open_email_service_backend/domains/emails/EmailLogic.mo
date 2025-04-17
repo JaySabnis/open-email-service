@@ -7,13 +7,13 @@ import Result "mo:base/Result";
 import Option "mo:base/Option";
 import List "mo:base/List";
 import Iter "mo:base/Iter";
-
-
+import Bool "mo:base/Bool";
 
 
 import Utils "../../utils/helper";
 
 import T "EmailTypes";
+import EmailTypes "EmailTypes";
 
 
 
@@ -53,6 +53,7 @@ module{
                 subject=mail.subject;
                 body=mail.body;
                 createdOn=now;
+                starred=false; //by deafult it wont be starred.
             };
 
             //add email to the email store
@@ -67,6 +68,7 @@ module{
                     let updatedRegistry:T.EmailRegistry={
                         inbox=senderRegistry.inbox;
                         outbox=updatedOutbox;
+                        important=List.nil();
                     };
                     registry.put(senderPrincipalId,updatedRegistry);
                     
@@ -77,6 +79,7 @@ module{
                     let newRegistry:T.EmailRegistry={
                         inbox=List.nil();
                         outbox=newOutbox;
+                        important=List.nil();
                     };
                     registry.put(senderPrincipalId,newRegistry);
                 };
@@ -94,6 +97,7 @@ module{
                     let updatedRegistry:T.EmailRegistry={
                         inbox=updatedInbox;
                         outbox=reciverRegistry.outbox;
+                        important=List.nil();
                     };
                     registry.put(recipientPrinicpalId,updatedRegistry);
                     
@@ -104,7 +108,7 @@ module{
                     let newRegistry:T.EmailRegistry={
                         inbox=newInbox;
                         outbox=List.nil();
-
+                        important=List.nil();
                     };
                     registry.put(recipientPrinicpalId,newRegistry);
                 };
@@ -117,12 +121,21 @@ module{
         //get list of recevied mails
         public func fetchInboxMails(caller:Principal): async List.List<T.EmailResponseDTO>{
             //authenticate user when fetching the emails.
-           let receviedEmailIds:List.List<Text> = switch(registry.get(caller)){
+            let receviedEmailIds:List.List<Text> = switch(registry.get(caller)){
                 case(?emailRegistry) emailRegistry.inbox;
                 case null List.nil();
             };
+            
+            let importantMailsList:List.List<Text> = getImportantMailList(caller);
 
-           let emails = List.mapFilter<Text, T.EmailResponseDTO>(receviedEmailIds, func(id) {
+            let emails = List.mapFilter<Text, T.EmailResponseDTO>(receviedEmailIds, func(id) {
+
+            // Check if the current email ID exists in the importantMailsList
+            let isStarred=switch(List.find<Text>(importantMailsList, func(listId){listId==id})){
+                case(?_) true;
+                case null false;
+            };
+
             switch (emailStore.get(id)) {
                     case (?email) {
 
@@ -132,7 +145,8 @@ module{
                                 to=email.to;
                                 subject=email.subject;
                                 body=email.body;
-                                createdOn=email.createdOn;    
+                                createdOn=email.createdOn;   
+                                starred=isStarred;
                             };
 
                             return ?responseEmail;
@@ -147,15 +161,23 @@ module{
         };
 
 
-         //get list of sent mails
+        //get list of sent mails
         public func fetchOutboxMails(caller:Principal): async List.List<T.EmailResponseDTO>{
             //authenticate user when fetching the emails.
-           let sentEmailIds:List.List<Text> = switch(registry.get(caller)){
+            let sentEmailIds:List.List<Text> = switch(registry.get(caller)){
                 case(?emailRegistry) emailRegistry.outbox;
                 case null List.nil();
             };
 
-           let emails = List.mapFilter<Text, T.EmailResponseDTO>(sentEmailIds, func(id) {
+            let importantMailsList:List.List<Text> = getImportantMailList(caller);
+            let emails = List.mapFilter<Text, T.EmailResponseDTO>(sentEmailIds, func(id) {
+            
+            // Check if the current email ID exists in the importantMailsList
+            let isStarred=switch(List.find<Text>(importantMailsList, func(listId){listId==id})){
+                case(?_) true;
+                case null false;
+            };
+
             switch (emailStore.get(id)) {
                     case (?email) {
 
@@ -165,7 +187,8 @@ module{
                                 to=email.to;
                                 subject=email.subject;
                                 body=email.body;
-                                createdOn=email.createdOn;    
+                                createdOn=email.createdOn; 
+                                starred=isStarred;   
                             };
 
                             return ?responseEmail;
@@ -178,10 +201,74 @@ module{
             return emails;
 
         };
+         
 
+        // mark it as important
+        public func markItAsImportant(caller:Principal,emailId:Text):(){
+
+            let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
+
+            let importantMails:List.List<Text> = switch(savedRecord){
+                case(?emailRegistry) emailRegistry.important;
+                case null List.nil();
+            };
+
+            let updatedImportantMailsList:List.List<Text> = List.push(emailId,importantMails);
+
+            switch(savedRecord) {
+                case(?savedRecord) { 
+                    let updatedRegistry:EmailTypes.EmailRegistry={
+                        inbox=savedRecord.inbox;
+                        outbox=savedRecord.outbox;
+                        important=updatedImportantMailsList;
+                    };
+
+                    //add updated records.
+                    registry.put(caller,updatedRegistry);
+                 };
+                case null {};
+            };   
+
+        };
+        
+
+        private func getImportantMailList(caller:Principal):List.List<Text>{
+            let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
+
+            let importantMails:List.List<Text> = switch(savedRecord){
+                case(?emailRegistry) emailRegistry.important;
+                case null List.nil();
+            };
+            return importantMails;
+
+        };
+
+        public func getMailById(emailId:Text):Result.Result<EmailTypes.EmailResponseDTO,EmailTypes.EmailErrors>{
+
+            //todo authentication of user;
+
+            let savedEmail:?EmailTypes.Email=emailStore.get(emailId);
+            switch(savedEmail){
+                case(?email){
+                    let emailRespose:EmailTypes.EmailResponseDTO={
+                                id=emailId;
+                                from=email.from;
+                                to=email.to;
+                                subject=email.subject;
+                                body=email.body;
+                                createdOn=email.createdOn; 
+                                starred=false;   //todo:add logic later to make it highlighted if needed from FE.
+
+                    };
+                //add logic to mark it as read
+                return #ok(emailRespose);
+                };
+                case null #err(#NotFound);
+            }
+
+        };
 
         //data persistance
-
         public func getStableEmailStore():[(Text,T.Email)]{
             return Iter.toArray(emailStore.entries());
         };

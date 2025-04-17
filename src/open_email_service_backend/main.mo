@@ -10,7 +10,6 @@ import EmailTypes "domains/emails/EmailTypes";
 import EmailManager "domains/emails/EmailLogic";
 
 
-
 actor {
 
   stable var stable_profile:[(Principal,ProfileType.Profile)] = [];
@@ -47,6 +46,11 @@ actor {
     let recipientPrinicpalId:?Principal=profileService.getPrincipalId(mail.to);
 
     await emailManager.sendEmail(senderAddress,caller,recipientPrinicpalId,mail);
+  };
+
+
+  public shared({caller}) func markItAsImportant(emailId:Text): async () {
+    emailManager.markItAsImportant(caller,emailId); 
   };
 
   public shared({caller}) func fetchInboxMails(): async List.List<EmailTypes.EmailResponseDTO> {

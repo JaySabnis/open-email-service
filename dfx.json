@@ -9,7 +9,7 @@
     },
     "open_email_service_frontend": {
       "dependencies": [
-        "open_email_service_backend"
+        "backend"
       ],
       "source": [
         "src/open_email_service_frontend/dist"
