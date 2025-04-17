@@ -1,6 +1,6 @@
-import Principal "mo:base/Principal";
 import List "mo:base/List";
 import Text "mo:base/Text";
+import Bool "mo:base/Bool";
 
 module{
     
@@ -12,6 +12,7 @@ module{
         subject:Text;
         body:Text;
         createdOn:Timestamp;
+        starred:Bool;
         //add parent mail id for threading
     };
 
@@ -28,6 +29,7 @@ module{
         subject:Text;
         body:Text;
         createdOn:Timestamp;
+        starred:Bool;
         //add parent mail id for threading
     };
 
@@ -35,6 +37,7 @@ module{
     public type EmailRegistry={
         inbox:List.List<Text>;
         outbox:List.List<Text>; 
+        important:List.List<Text>;
     };
 
     public type EmailErrors={
