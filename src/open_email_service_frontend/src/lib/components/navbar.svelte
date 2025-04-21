@@ -16,7 +16,7 @@
 
 <div class="relative">
   <nav class="bg-blue-600 p-4 flex justify-between items-center">
-    <button class="text-white text-2xl font-semibold" on:click={goto('/dashboard')}>Open Email</button>
+    <a class="text-white text-2xl font-semibold" href="/dashboard">Open Email</a>
 
     <div class="relative">
       <button
