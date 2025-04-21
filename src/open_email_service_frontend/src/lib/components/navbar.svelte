@@ -16,7 +16,7 @@
 
 <div class="relative">
   <nav class="bg-blue-600 p-4 flex justify-between items-center">
-    <div class="text-white text-2xl font-semibold" on:click={goto('/dashboard')}>Open Email</div>
+    <button class="text-white text-2xl font-semibold" on:click={goto('/dashboard')}>Open Email</button>
 
     <div class="relative">
       <button
@@ -43,7 +43,7 @@
               <a href="/profile" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Profile</a>
             </li>
             <li>
-              <div on:click={handleSignOut} class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Sign Out</div>
+              <button on:click={handleSignOut} class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Sign Out</button>
             </li>
           </ul>
         </div>

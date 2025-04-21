@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import Navbar from "$lib/components/navbar.svelte"; 
   import { onMount } from "svelte";
+  import "../app.css";
   
   let isAuthenticated = false;
 
@@ -32,6 +33,7 @@
 </div>
 
 <style>
+   @reference "tailwindcss";
   .layout-container {
     display: flex;
     flex-direction: column;

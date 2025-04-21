@@ -57,7 +57,7 @@ const logout = async ({
   //   ]);
   // }
 
-  console.log("logout")
+  // console.log("logout")
   await authStore.signOut();
 
   if (msg) {
