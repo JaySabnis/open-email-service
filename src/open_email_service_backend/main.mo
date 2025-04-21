@@ -53,6 +53,11 @@ actor {
     emailManager.markItAsImportant(caller,emailId); 
   };
 
+  public shared({caller}) func getMailById(mailId:Text): async Result.Result<EmailTypes.EmailResponseDTO,EmailTypes.EmailErrors>{
+    return emailManager.getMailById(caller,mailId);
+  };
+
+
   public shared({caller}) func fetchInboxMails(): async List.List<EmailTypes.EmailResponseDTO> {
     await  emailManager.fetchInboxMails(caller);
   };

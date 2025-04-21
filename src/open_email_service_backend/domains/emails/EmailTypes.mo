@@ -13,6 +13,7 @@ module{
         body:Text;
         createdOn:Timestamp;
         starred:Bool;
+        readFlag:Bool;
         //add parent mail id for threading
     };
 
@@ -22,7 +23,7 @@ module{
         body:Text;
     };
 
-     public type EmailResponseDTO={
+    public type EmailResponseDTO={
         id:Text;
         from:Text;
         to:Text;
@@ -30,6 +31,7 @@ module{
         body:Text;
         createdOn:Timestamp;
         starred:Bool;
+        readFlag:Bool;
         //add parent mail id for threading
     };
 
@@ -38,6 +40,7 @@ module{
         inbox:List.List<Text>;
         outbox:List.List<Text>; 
         important:List.List<Text>;
+        openedMails:List.List<Text>;
     };
 
     public type EmailErrors={
