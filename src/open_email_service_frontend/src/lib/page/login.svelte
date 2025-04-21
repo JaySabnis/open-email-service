@@ -4,7 +4,7 @@
     import { browser } from "$app/environment"; 
   
     async function handleLogin() {
-      console.log("Logging in...");
+      // console.log("Logging in...");
       let params = {
         domain: `http://localhost:4943/?canisterId=qhbym-qaaaa-aaaaa-aaafq-cai`,
       };
@@ -16,7 +16,7 @@
   <main class="min-h-screen relative flex items-center justify-center bg-gray-100">
   
     <div class="hidden lg:block absolute inset-0">
-      <img src="https://www.ccn.com/wp-content/uploads/2024/11/4-cryptos-all-time-high-1536x864.webp" alt="Login Image" class="w-full h-full object-cover" />
+      <!-- <img src="https://miro.medium.com/v2/resize:fit:1400/1*guz0NRDfCNOU5nnfsiEsFw.jpeg" alt="Login Image" class="w-full h-full" /> -->
     </div>
   
     <div class="relative z-10 w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg text-center">

@@ -1,6 +1,7 @@
 <script>
   import { signOut } from "$lib/services/auth.service";
   import { authSignedInStore } from "$lib/derived/auth.derived";
+  import { profileStore } from "$lib/store/profile-store";
 
   if (!authSignedInStore) {
     signOut();
@@ -12,7 +13,7 @@
   let status = ''; 
   let description = ''; 
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const profileData = {
       name,
       surname,
@@ -20,7 +21,14 @@
       status,
       description
     };
-    console.log('Profile Data:', profileData);
+
+    const testData = await profileStore.createProfile(profileData);
+    console.log(testData,"data after profile creation")
+    name='';
+    surname = '';
+    userAddress = '';
+    status = ''; 
+    description = ''; 
   }
 </script>
 
