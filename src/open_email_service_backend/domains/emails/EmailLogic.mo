@@ -54,6 +54,7 @@ module{
                 body=mail.body;
                 createdOn=now;
                 starred=false; //by deafult it wont be starred.
+                readFlag=false;
             };
 
             //add email to the email store
@@ -69,6 +70,7 @@ module{
                         inbox=senderRegistry.inbox;
                         outbox=updatedOutbox;
                         important=List.nil();
+                        openedMails=List.nil();
                     };
                     registry.put(senderPrincipalId,updatedRegistry);
                     
@@ -80,6 +82,7 @@ module{
                         inbox=List.nil();
                         outbox=newOutbox;
                         important=List.nil();
+                        openedMails=List.nil();
                     };
                     registry.put(senderPrincipalId,newRegistry);
                 };
@@ -98,6 +101,7 @@ module{
                         inbox=updatedInbox;
                         outbox=reciverRegistry.outbox;
                         important=List.nil();
+                        openedMails=List.nil();
                     };
                     registry.put(recipientPrinicpalId,updatedRegistry);
                     
@@ -109,6 +113,7 @@ module{
                         inbox=newInbox;
                         outbox=List.nil();
                         important=List.nil();
+                        openedMails=List.nil();
                     };
                     registry.put(recipientPrinicpalId,newRegistry);
                 };
@@ -125,9 +130,14 @@ module{
                 case(?emailRegistry) emailRegistry.inbox;
                 case null List.nil();
             };
-            
+
+            // get read recipt
+            let openedMails:List.List<Text> = getOpenedMailList(caller);
+
+            //get starred email
             let importantMailsList:List.List<Text> = getImportantMailList(caller);
 
+            //iterate through all mails and assign them flags
             let emails = List.mapFilter<Text, T.EmailResponseDTO>(receviedEmailIds, func(id) {
 
             // Check if the current email ID exists in the importantMailsList
@@ -135,6 +145,13 @@ module{
                 case(?_) true;
                 case null false;
             };
+
+            //set read flag
+            let isOpened=switch(List.find<Text>(openedMails, func(listId){listId==id})){
+                case(?_) true;
+                case null false;
+            };
+
 
             switch (emailStore.get(id)) {
                     case (?email) {
@@ -147,6 +164,7 @@ module{
                                 body=email.body;
                                 createdOn=email.createdOn;   
                                 starred=isStarred;
+                                readFlag=isOpened;
                             };
 
                             return ?responseEmail;
@@ -188,7 +206,8 @@ module{
                                 subject=email.subject;
                                 body=email.body;
                                 createdOn=email.createdOn; 
-                                starred=isStarred;   
+                                starred=isStarred; 
+                                readFlag=true;  
                             };
 
                             return ?responseEmail;
@@ -221,6 +240,7 @@ module{
                         inbox=savedRecord.inbox;
                         outbox=savedRecord.outbox;
                         important=updatedImportantMailsList;
+                        openedMails=List.nil();
                     };
 
                     //add updated records.
@@ -232,18 +252,8 @@ module{
         };
         
 
-        private func getImportantMailList(caller:Principal):List.List<Text>{
-            let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
 
-            let importantMails:List.List<Text> = switch(savedRecord){
-                case(?emailRegistry) emailRegistry.important;
-                case null List.nil();
-            };
-            return importantMails;
-
-        };
-
-        public func getMailById(emailId:Text):Result.Result<EmailTypes.EmailResponseDTO,EmailTypes.EmailErrors>{
+        public func getMailById(caller:Principal,emailId:Text):Result.Result<EmailTypes.EmailResponseDTO,EmailTypes.EmailErrors>{
 
             //todo authentication of user;
 
@@ -258,15 +268,72 @@ module{
                                 body=email.body;
                                 createdOn=email.createdOn; 
                                 starred=false;   //todo:add logic later to make it highlighted if needed from FE.
+                                readFlag=true;
 
                     };
-                //add logic to mark it as read
+
+                //mark it as read
+                markAsRead(caller,emailId);
+                     
                 return #ok(emailRespose);
                 };
                 case null #err(#NotFound);
             }
 
         };
+
+        //mark email as read
+        private func markAsRead(caller:Principal,emailId:Text):() {
+
+                let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
+
+                let openedMailsList:List.List<Text> = switch(savedRecord){
+                    case(?emailRegistry) emailRegistry.openedMails;
+                    case null List.nil();
+                };
+                
+                let updateOpenedMailList:List.List<Text> = List.push(emailId,openedMailsList);
+
+                switch(savedRecord) {
+                case(?savedRecord) { 
+                    let updatedRegistry:EmailTypes.EmailRegistry={
+                        inbox=savedRecord.inbox;
+                        outbox=savedRecord.outbox;
+                        important=savedRecord.important;
+                        openedMails=updateOpenedMailList;
+                    };
+
+                    //add updated records.
+                    registry.put(caller,updatedRegistry);
+                 };
+                case null {};
+            }; 
+            
+        };
+
+        //reused functions
+
+        private func getImportantMailList(caller:Principal):List.List<Text>{
+            let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
+
+            let importantMails:List.List<Text> = switch(savedRecord){
+                case(?emailRegistry) emailRegistry.important;
+                case null List.nil();
+            };
+            return importantMails;
+
+        };
+
+        private func getOpenedMailList(caller:Principal):List.List<Text>{
+            let savedRecord:?EmailTypes.EmailRegistry=registry.get(caller);
+
+            let openedMails:List.List<Text> = switch(savedRecord){
+                case(?emailRegistry) emailRegistry.openedMails;
+                case null List.nil();
+            };
+            return openedMails;
+        };
+
 
         //data persistance
         public func getStableEmailStore():[(Text,T.Email)]{
