@@ -7,9 +7,8 @@ export class ProfileService {
   async createProfile(data) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bkyz2-fmaaa-aaaaa-qaaaq-cai",
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
-
 
     let dto = {
       status: data.status != null ? [data.status] : [],
@@ -24,4 +23,12 @@ export class ProfileService {
     return result;
   }
 
+  async getProfile() {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.getProfile();
+    return result;
+  }
 }
