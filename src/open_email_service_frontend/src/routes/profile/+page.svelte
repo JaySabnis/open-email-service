@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { signOut } from "$lib/services/auth.service";
+  import { signOut } from "$lib/services/auth.services";
   import { authSignedInStore } from "$lib/derived/auth.derived";
   import { profileStore } from "$lib/store/profile-store";
   import Loader from "$lib/components/loader.svelte";
