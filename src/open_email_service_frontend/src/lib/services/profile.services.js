@@ -31,4 +31,23 @@ export class ProfileService {
     const result = await identityActor.getProfile();
     return result;
   }
+
+  async updateProfile() {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+
+    let dto = {
+      status: data.status != null ? [data.status] : [],
+      name: data.name,
+      description: data.description != null ? [data.description] : [],
+      surname: data.surname,
+      profileImage: []
+    };
+
+    const result = await identityActor.updateProfile(dto);
+    return result;
+  }
+
 }
