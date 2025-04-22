@@ -15,8 +15,7 @@
 </script>
 
 <div class="relative">
-  <nav class="bg-blue-600 p-4 flex justify-between items-center">
-    <a class="text-white text-2xl font-semibold" href="/dashboard">Open Email</a>
+  <nav class="bg-blue-600 p-4 flex justify-end items-center">
 
     <div class="relative">
       <button

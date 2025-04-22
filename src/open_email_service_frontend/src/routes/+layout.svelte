@@ -1,11 +1,14 @@
 <script>
-  import { authSignedInStore } from "$lib/derived/auth.derived"; 
+    import { authSignedInStore } from "$lib/derived/auth.derived";
+  import Sidebar from '$lib/components/sidebar.svelte';
   import { goto } from "$app/navigation";
   import Navbar from "$lib/components/navbar.svelte"; 
   import { onMount } from "svelte";
   import "../app.css";
-  
-  let isAuthenticated = false;
+
+  let isSidebarOpen = false;
+  let isAuthenticated = false; 
+  let isMobile = false;
 
   $: isAuthenticated = $authSignedInStore;
 
@@ -13,27 +16,42 @@
     if (!isAuthenticated) {
       goto('/');
     }
+
+    if (window.innerWidth < 768) {
+      isMobile = true;
+    }
+    window.addEventListener('resize', () => {
+      isMobile = window.innerWidth < 768;
+    });
   });
+
+  const toggleSidebar = () => {
+    isSidebarOpen = !isSidebarOpen;
+  };
 </script>
 
 <div class="layout-container">
   {#if isAuthenticated}
-    <Navbar /> 
+    <Sidebar {isSidebarOpen} {toggleSidebar} />
   {/if}
-  
-  <main class="content">
-    <slot></slot> 
-  </main>
 
-  {#if !isAuthenticated}
-    <div class="login-prompt">
-      <!-- <button on:click={() => goto('/')}>Login test</button>  -->
-    </div>
-  {/if}
+  <div
+    class=""
+    class:ml-64={isAuthenticated && isSidebarOpen} 
+    class:ml-16={isAuthenticated && !isSidebarOpen}
+  >
+    {#if isAuthenticated}
+      <Navbar />
+    {/if}
+
+    <main class="content">
+      <slot></slot>
+    </main>
+  </div>
 </div>
 
 <style>
-   @reference "tailwindcss";
+  @reference "tailwindcss";
   .layout-container {
     display: flex;
     flex-direction: column;
