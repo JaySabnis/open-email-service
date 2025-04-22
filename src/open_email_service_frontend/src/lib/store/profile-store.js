@@ -12,9 +12,14 @@ function createProfilStore() {
   async function getProfile() {
     return new ProfileService().getProfile();
   }
+
+  async function updateProfile() {
+    return new ProfileService().updateProfile();
+  }
   return {
     createProfile,
     getProfile,
+    updateProfile,
     subscribe,
   };
 }
