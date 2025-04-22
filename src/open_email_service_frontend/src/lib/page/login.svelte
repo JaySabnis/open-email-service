@@ -1,5 +1,5 @@
 <script>
-    import { signIn } from "$lib/services/auth.service"; 
+    import { signIn } from "$lib/services/auth.services"; 
     import { goto } from "$app/navigation"; 
     import { browser } from "$app/environment"; 
   

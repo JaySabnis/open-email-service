@@ -1,5 +1,5 @@
 <script>
-  import { signOut } from "$lib/services/auth.service";
+  import { signOut } from "$lib/services/auth.services";
   import { goto } from "$app/navigation";
 
   let menuOpen = false; 
