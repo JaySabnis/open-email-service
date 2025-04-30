@@ -2,6 +2,7 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
 import List "mo:base/List";
+import Nat "mo:base/Nat";
 
 import ProfileLogic "domains/profiles/Logic";
 import ProfileType "domains/profiles/Types";
@@ -44,7 +45,8 @@ actor {
    
     let senderAddress:?Text=profileService.getUserAddress(caller);
     let recipientPrinicpalId:?Principal=profileService.getPrincipalId(mail.to);
-
+    
+    //todo always ensure data here , and not in manager.
     await emailManager.sendEmail(senderAddress,caller,recipientPrinicpalId,mail);
   };
 
@@ -53,17 +55,17 @@ actor {
     emailManager.markItAsImportant(caller,emailId); 
   };
 
-  public shared({caller}) func getMailById(mailId:Text): async Result.Result<EmailTypes.EmailResponseDTO,EmailTypes.EmailErrors>{
+  public shared({caller}) func getMailById(mailId:Text): async Result.Result<EmailTypes.EmailBodyResponseDTO,EmailTypes.EmailErrors>{
     return emailManager.getMailById(caller,mailId);
   };
 
 
-  public shared({caller}) func fetchInboxMails(): async List.List<EmailTypes.EmailResponseDTO> {
-    await  emailManager.fetchInboxMails(caller);
+  public shared({caller}) func fetchInboxMails(pageNumber:Nat,pageSize:Nat): async [EmailTypes.EmailResponseDTO] {
+    await  emailManager.fetchInboxMails(caller,pageNumber,pageSize);
   };
 
-  public shared({caller}) func fetchOutboxMails(): async List.List<EmailTypes.EmailResponseDTO> {
-    await  emailManager.fetchOutboxMails(caller);
+  public shared({caller}) func fetchOutboxMails(pageNumber:Nat,pageSize:Nat): async [EmailTypes.EmailResponseDTO]{
+    await  emailManager.fetchOutboxMails(caller,pageNumber,pageSize);
   };
 
   system func preupgrade(){
