@@ -28,6 +28,17 @@ module{
         from:Text;
         to:Text;
         subject:Text;
+        createdOn:Timestamp;
+        starred:Bool;
+        readFlag:Bool;
+        //add parent mail id for threading
+    };
+
+    public type EmailBodyResponseDTO={
+        id:Text;
+        from:Text;
+        to:Text;
+        subject:Text;
         body:Text;
         createdOn:Timestamp;
         starred:Bool;
