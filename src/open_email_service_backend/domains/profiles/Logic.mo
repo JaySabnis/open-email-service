@@ -6,6 +6,7 @@ import Text "mo:base/Text";
 import Time "mo:base/Time";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
+import Bool "mo:base/Bool";
 
 
 import T "Types";
@@ -16,15 +17,15 @@ module{
 
         //hashmap <Principal, Profile>
         public var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
+        private var userAddressToIdMap:TrieMap.TrieMap<Text,Principal> = TrieMap.TrieMap<Text,Principal>(Text.equal,Text.hash);
        
-        let now:T.Timestamp = Time.now(); // get time stamp
 
         //create profile
         public func createProfile( caller : Principal, profileDTO : T.CreateProfileDTO ) : T.ProfileResult {
             
             //validate data
             if(profileDTO.name.size()==0 or profileDTO.surname.size()==0){
-                return #err(#InvalidData("Name or surname cannot be empty"));
+                return #err(#InvalidData("Name and surname cannot be empty"));
             };
             
             //validate description
@@ -37,35 +38,39 @@ module{
                 case _ {};   
             };
 
-            //check if userAddresses has already registered the username
-            let ifUserAddressExist=profiles.get(caller);
+            //check if user address is taken
+            let isUserAddressTaken:Bool=not isUserAddressAvailable(profileDTO.userAddress);
+            if(isUserAddressTaken){
+                return #err(#AlreadyExists("User address already taken. Please choose another. "));
+            };
 
-            switch(ifUserAddressExist) {
+            //check if user has already registered 
+            let ifUserExist=profiles.get(caller);
+
+            switch(ifUserExist) {
                
-                case(?ifUserAddressExist) { 
+                case(?ifUserExist) { 
                      return #err(#AlreadyExists("User with this id already exist!."));
                  };    
                 
                 case(null) {
                     let saveProfile : T.Profile = {
-                                        id=Principal.toText(caller);
+                                        id=caller;
                                         name=profileDTO.name;
                                         surname=profileDTO.surname;
                                         userAddress=profileDTO.userAddress;
                                         status=profileDTO.status;
                                         description=profileDTO.description;
                                         profileImage=profileDTO.profileImage;
-                                        createdOn=now;
-                                        modifiedOn=now;
+                                        createdOn=Time.now();
+                                        modifiedOn=Time.now();
                                     };
                     profiles.put(caller,saveProfile);
-                     
+                    userAddressToIdMap.put(profileDTO.userAddress,caller);
                     return #ok;   
                 };
             };   
         };
-
-
     
         public func updateProfile(caller : Principal, profileDTO : T.UpdateProfileDTO) : Result.Result<T.Profile, T.ProfileError> {
             let savedProfile = profiles.get(caller);
@@ -81,7 +86,7 @@ module{
                         description = ?Option.get(profileDTO.description, "");
                         profileImage = ?Option.get(profileDTO.profileImage,Blob.fromArray([]));
                         createdOn = profile.createdOn;
-                        modifiedOn=now;
+                        modifiedOn=Time.now();
                     };
 
                     profiles.put(caller,updatedProfile);
@@ -112,15 +117,17 @@ module{
 
         //Get Principal Id using userAddress
         public func getPrincipalId(userAddress:Text):?Principal{
-            for((principal,profile) in profiles.entries()){
-                if(profile.userAddress==userAddress){
-                    return ?principal;
-                };      
-            };
-            return null;
-
+            let principalId:?Principal=userAddressToIdMap.get(userAddress);
+            return principalId;
         };
 
+        //check if principal id is taken by someone
+        public func isUserAddressAvailable(userAddress:Text):Bool{
+            switch(userAddressToIdMap.get(userAddress)){
+                case(?_) false;
+                case null true;
+            };
+        };
 
         //Get Principal Id using userAddress
         public func getUserAddress(caller:Principal) : ?Text{
@@ -131,11 +138,18 @@ module{
             };     
         };
 
-
         //Delete Profile
         public func deleteProfile(caller:Principal) : T.ProfileResult{
-            profiles.delete(caller);
-            return #ok;
+            switch (profiles.get(caller)) {
+                case (?profile) {
+                    userAddressToIdMap.delete(profile.userAddress);
+                    profiles.delete(caller);
+                    #ok;
+                };
+                case null {
+                    #err(#NotFound); 
+                };
+            };
         };
 
 

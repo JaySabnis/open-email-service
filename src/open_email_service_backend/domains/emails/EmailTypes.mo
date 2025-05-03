@@ -12,8 +12,6 @@ module{
         subject:Text;
         body:Text;
         createdOn:Timestamp;
-        starred:Bool;
-        readFlag:Bool;
         //add parent mail id for threading
     };
 

@@ -12,6 +12,7 @@ import Array "mo:base/Array";
 import Order "mo:base/Order";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
+import Trie "mo:base/Trie";
 
 
 import Utils "../../utils/helper";
@@ -56,8 +57,6 @@ module{
                 subject=mail.subject;
                 body=mail.body;
                 createdOn=Time.now();
-                starred=false; //by deafult it wont be starred.
-                readFlag=false;
             };
 
             //add email to the email store
@@ -134,48 +133,6 @@ module{
                 case null List.nil();
             };
 
-            // get read recipt
-            let openedMails:List.List<Text> = getOpenedMailList(caller);
-
-            //get starred email
-            let importantMailsList:List.List<Text> = getImportantMailList(caller);
-
-            // //iterate through all mails and assign them flags
-            // let emails = List.mapFilter<Text, T.EmailResponseDTO>(receviedEmailIds, func(id) {
-
-            // // Check if the current email ID exists in the importantMailsList
-            // let isStarred=switch(List.find<Text>(importantMailsList, func(listId){listId==id})){
-            //     case(?_) true;
-            //     case null false;
-            // };
-
-            // //set read flag
-            // let isOpened=switch(List.find<Text>(openedMails, func(listId){listId==id})){
-            //     case(?_) true;
-            //     case null false;
-            // };
-
-
-            // switch (emailStore.get(id)) {
-            //         case (?email) {
-
-            //                 let responseEmail:T.EmailResponseDTO={
-            //                     id=id;
-            //                     from=email.from;
-            //                     to=email.to;
-            //                     subject=email.subject;
-            //                     createdOn=email.createdOn;   
-            //                     starred=isStarred;
-            //                     readFlag=isOpened;
-            //                 };
-
-            //                 return ?responseEmail;
-
-            //         }; // Extract the email if it exists
-            //         case null null;       // Skip if the email is null
-            //     }
-            // });
-
             let emails = List.mapFilter<Text, T.EmailResponseDTO>(receviedEmailIds, func(id) {switch (emailStore.get(id)) {
                     case (?email) {
 
@@ -208,15 +165,7 @@ module{
                 case null List.nil();
             };
 
-            let importantMailsList:List.List<Text> = getImportantMailList(caller);
-            let emails = List.mapFilter<Text, T.EmailResponseDTO>(sentEmailIds, func(id) {
-            
-            // Check if the current email ID exists in the importantMailsList
-            let isStarred=switch(List.find<Text>(importantMailsList, func(listId){listId==id})){
-                case(?_) true;
-                case null false;
-            };
-
+            let emails = List.mapFilter<Text, T.EmailResponseDTO>(sentEmailIds, func(id) {            
             switch (emailStore.get(id)) {
                     case (?email) {
 
@@ -226,8 +175,8 @@ module{
                                 to=email.to;
                                 subject=email.subject;
                                 createdOn=email.createdOn; 
-                                starred=isStarred; 
-                                readFlag=true;  
+                                starred=false; 
+                                readFlag=false;  
                             };
 
                             return ?responseEmail;
@@ -253,8 +202,7 @@ module{
 
             // Calculate pagination bounds
             let startIdx = pageNumber * pageSize;
-            let endIdx = startIdx + pageSize;
-
+    
              // Handle case where start index is beyond array bounds
             if (startIdx >= sortedEmails.size()) {
                 return [];
@@ -298,9 +246,7 @@ module{
                     starred = isStarred;
                 }
 
-            });
-
-            
+            });           
         };
          
 
@@ -390,9 +336,15 @@ module{
             
         };
 
-        
-        //reused functions
+        //delete all mails for the caller while deleting the profile.
+        public func deleteMails(caller:Principal):(){
+            switch(registry.get(caller)){
+                case (?_) registry.delete(caller);
+                case null {};
+            };   
+        };
 
+        //reused functions
         private func getImportantMailList(caller:Principal):List.List<Text>{
             let savedRecord:?T.EmailRegistry=registry.get(caller);
 
