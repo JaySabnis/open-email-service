@@ -1,8 +1,8 @@
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
-import List "mo:base/List";
 import Nat "mo:base/Nat";
+import Bool "mo:base/Bool";
 
 import ProfileLogic "domains/profiles/Logic";
 import ProfileType "domains/profiles/Types";
@@ -14,10 +14,9 @@ import EmailManager "domains/emails/EmailLogic";
 actor {
 
   stable var stable_profile:[(Principal,ProfileType.Profile)] = [];
-
   stable var stable_emailStore:[(Text,EmailTypes.Email)] = [];
-
   stable var stable_registries:[(Principal,EmailTypes.EmailRegistry)] = [];
+  //todo: stable user address stores.
 
   //profile manager
   let profileService=ProfileLogic.ProfileManager();
@@ -30,7 +29,12 @@ actor {
     profileService.createProfile(caller,profile);
   };
 
-    //update  profile
+  //check if user address is available 
+  public query func isUserAddressAvailable(userAddress:Text):async Bool{
+    return profileService.isUserAddressAvailable(userAddress);
+  };
+
+  //update  profile
   public shared ({caller}) func updateProfile(profile:ProfileType.UpdateProfileDTO):async Result.Result<ProfileType.Profile,ProfileType.ProfileError>{
     profileService.updateProfile(caller,profile);
   };
@@ -38,6 +42,12 @@ actor {
   // return result should be in main
   public shared({caller}) func getProfile(): async Result.Result<ProfileType.Profile,ProfileType.ProfileError>{
     profileService.getProfile(caller);
+  };
+
+  //delete profile
+  public shared({caller}) func deleteProfile() : async ProfileType.ProfileResult{
+    emailManager.deleteMails(caller);
+    profileService.deleteProfile(caller); 
   };
 
 
@@ -55,6 +65,7 @@ actor {
     emailManager.markItAsImportant(caller,emailId); 
   };
 
+
   public shared({caller}) func getMailById(mailId:Text): async Result.Result<EmailTypes.EmailBodyResponseDTO,EmailTypes.EmailErrors>{
     return emailManager.getMailById(caller,mailId);
   };
@@ -64,9 +75,11 @@ actor {
     await  emailManager.fetchInboxMails(caller,pageNumber,pageSize);
   };
 
+
   public shared({caller}) func fetchOutboxMails(pageNumber:Nat,pageSize:Nat): async [EmailTypes.EmailResponseDTO]{
     await  emailManager.fetchOutboxMails(caller,pageNumber,pageSize);
   };
+
 
   system func preupgrade(){
     stable_profile:=profileService.getStableProfiles(); 

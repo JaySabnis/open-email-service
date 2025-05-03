@@ -1,6 +1,7 @@
 import Blob "mo:base/Blob";
 import Time "mo:base/Time";
 import Text "mo:base/Text";
+import Principal "mo:base/Principal";
 
 module{
 
@@ -8,7 +9,7 @@ module{
 
     // Main Profile type
     public type Profile={
-        id:Text;
+        id:Principal;
         name:Text;
         surname:Text;
         userAddress:Text;
