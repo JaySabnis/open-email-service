@@ -16,7 +16,9 @@ actor {
   stable var stable_profile:[(Principal,ProfileType.Profile)] = [];
   stable var stable_emailStore:[(Text,EmailTypes.Email)] = [];
   stable var stable_registries:[(Principal,EmailTypes.EmailRegistry)] = [];
-  //todo: stable user address stores.
+  stable var stable_fileStore:[(Text,EmailTypes.File)] = [];
+  //todo: stable user address stores
+  
 
   //profile manager
   let profileService=ProfileLogic.ProfileManager();
@@ -81,16 +83,29 @@ actor {
   };
 
 
+  public func uploadFile(fileData : EmailTypes.FileRequestDTO) : async Result.Result<EmailTypes.FileResponseDTO, EmailTypes.FileErrors> {
+    await emailManager.uploadFile(fileData);
+  };
+
+
+  public query func getFile(fileId : Text) : async Result.Result<EmailTypes.File, EmailTypes.FileErrors>{
+    emailManager.getFile(fileId);
+  };
+  
+
+
   system func preupgrade(){
     stable_profile:=profileService.getStableProfiles(); 
     stable_emailStore:=emailManager.getStableEmailStore();
     stable_registries:=emailManager.getStableRegistries();
+    stable_fileStore:=emailManager.getStableFileStore();
   };
 
   system func postupgrade(){
     profileService.setStableProfile(stable_profile);
     emailManager.setStableEmailStore(stable_emailStore);
     emailManager.setStableRegistries(stable_registries);
+    emailManager.setStableFileStore(stable_fileStore);
   };
 
 

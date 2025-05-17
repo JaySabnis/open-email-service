@@ -1,6 +1,7 @@
 import List "mo:base/List";
 import Text "mo:base/Text";
 import Bool "mo:base/Bool";
+import Blob "mo:base/Blob";
 
 module{
     
@@ -11,6 +12,7 @@ module{
         to:Text;
         subject:Text;
         body:Text;
+        attachmentIds:[Text];
         createdOn:Timestamp;
         //add parent mail id for threading
     };
@@ -19,6 +21,7 @@ module{
         to:Text;
         subject:Text;
         body:Text;
+        attachmentIds:[Text];
     };
 
     public type EmailResponseDTO={
@@ -38,6 +41,7 @@ module{
         to:Text;
         subject:Text;
         body:Text;
+        attachments:[FileResponseDTO];
         createdOn:Timestamp;
         starred:Bool;
         readFlag:Bool;
@@ -59,6 +63,29 @@ module{
         #ErrorSelfTransfer;
     };
 
-    
+    public type File = {
+        fileId: Text;
+        fileName: Text;
+        contentType: Text;
+        size: Nat;         
+        filedata: Blob;
+    };
+
+    public type FileRequestDTO = {
+        fileName: Text;
+        contentType: Text;        
+        filedata: Blob;
+    };
+
+    public type FileResponseDTO={
+        fileId: Text;
+        fileName: Text;  
+        size:Nat;
+    };
+
+    public type FileErrors={
+        #NotFound;
+        #UnexpectedErrorOccured;
+    };
 
 };
