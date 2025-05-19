@@ -41,7 +41,7 @@ module{
         to:Text;
         subject:Text;
         body:Text;
-        attachments:[FileResponseDTO];
+        attachments:?[FileResponseDTO];
         createdOn:Timestamp;
         starred:Bool;
         readFlag:Bool;

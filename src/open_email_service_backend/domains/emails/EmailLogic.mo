@@ -314,7 +314,7 @@ module {
                         to = email.to;
                         subject = email.subject;
                         body = email.body;
-                        attachments = attachments;
+                        attachments = ?attachments;
                         createdOn = email.createdOn;
                         starred = false; //todo:add logic later to make it highlighted if needed from FE.
                         readFlag = true;
