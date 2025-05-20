@@ -121,7 +121,7 @@ module {
         };
 
         //get list of recevied mails
-        public func fetchInboxMails(caller : Principal, pageNumber : Nat, pageSize : Nat) : async [T.EmailResponseDTO] {
+        public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
             //authenticate user when fetching the emails.
             let receviedEmailIds : List.List<Text> = switch (registry.get(caller)) {
                 case (?emailRegistry) emailRegistry.inbox;
@@ -151,13 +151,15 @@ module {
                     };
                 },
             );
-
-            return getPaginatedEmails(caller, pageNumber, pageSize, emails, false);
+            
+            // page number is optional, default pagination(pageNumber=1, pageSize=10)
+            return getPaginatedEmails(caller, Option.get(pageNumber,1), Option.get(pageSize,10), emails, false); 
 
         };
 
         //get list of sent mails
-        public func fetchOutboxMails(caller : Principal, pageNumber : Nat, pageSize : Nat) : async [T.EmailResponseDTO] {
+        public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
+            
             //authenticate user when fetching the emails.
             let sentEmailIds : List.List<Text> = switch (registry.get(caller)) {
                 case (?emailRegistry) emailRegistry.outbox;
@@ -188,11 +190,15 @@ module {
                 },
             );
 
-            return getPaginatedEmails(caller, pageNumber, pageSize, emails, true);
+            // page number is optional, default pagination(pageNumber=1, pageSize=10)
+            return getPaginatedEmails(caller, Option.get(pageNumber,1), Option.get(pageSize,10), emails, true);
 
         };
 
         private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, emails : List.List<T.EmailResponseDTO>, isOutboxRequest : Bool) : [T.EmailResponseDTO] {
+
+            // Safely decrements pageNumber (returns 0 if pageNumber is 0)
+            let adjustedPageNumber : Nat = if( Nat.greater(pageNumber,0) ){ Nat.sub(pageNumber,1) }else{ 0 };
 
             let allEmails = List.toArray(emails);
 
@@ -205,7 +211,7 @@ module {
             );
 
             // Calculate pagination bounds
-            let startIdx = pageNumber * pageSize;
+            let startIdx = adjustedPageNumber * pageSize;
 
             // Handle case where start index is beyond array bounds
             if (startIdx >= sortedEmails.size()) {
