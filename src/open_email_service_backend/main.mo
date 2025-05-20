@@ -17,8 +17,8 @@ actor {
   stable var stable_emailStore:[(Text,EmailTypes.Email)] = [];
   stable var stable_registries:[(Principal,EmailTypes.EmailRegistry)] = [];
   stable var stable_fileStore:[(Text,EmailTypes.File)] = [];
-  //todo: stable user address stores
-  
+  stable var stable_userAddressStore:[(Text,Principal)]=[];
+
 
   //profile manager
   let profileService=ProfileLogic.ProfileManager();
@@ -73,12 +73,12 @@ actor {
   };
 
 
-  public shared({caller}) func fetchInboxMails(pageNumber:Nat,pageSize:Nat): async [EmailTypes.EmailResponseDTO] {
+  public shared({caller}) func fetchInboxMails(pageNumber:?Nat,pageSize:?Nat): async [EmailTypes.EmailResponseDTO] {
     await  emailManager.fetchInboxMails(caller,pageNumber,pageSize);
   };
 
 
-  public shared({caller}) func fetchOutboxMails(pageNumber:Nat,pageSize:Nat): async [EmailTypes.EmailResponseDTO]{
+  public shared({caller}) func fetchOutboxMails(pageNumber:?Nat,pageSize:?Nat): async [EmailTypes.EmailResponseDTO]{
     await  emailManager.fetchOutboxMails(caller,pageNumber,pageSize);
   };
 
@@ -96,6 +96,7 @@ actor {
 
   system func preupgrade(){
     stable_profile:=profileService.getStableProfiles(); 
+    stable_userAddressStore:=profileService.getStableUserAddressStore();
     stable_emailStore:=emailManager.getStableEmailStore();
     stable_registries:=emailManager.getStableRegistries();
     stable_fileStore:=emailManager.getStableFileStore();
@@ -103,6 +104,7 @@ actor {
 
   system func postupgrade(){
     profileService.setStableProfile(stable_profile);
+    profileService.setStableUserAddressStore(stable_userAddressStore);
     emailManager.setStableEmailStore(stable_emailStore);
     emailManager.setStableRegistries(stable_registries);
     emailManager.setStableFileStore(stable_fileStore);

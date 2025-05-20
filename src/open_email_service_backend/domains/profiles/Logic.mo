@@ -154,18 +154,29 @@ module{
 
 
         public func setStableProfile(stableProfile:[(Principal,T.Profile)]):(){
-            
-            var temp_profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
-            
+        
             for(profile:(Principal,T.Profile) in Iter.fromArray(stableProfile)){
-                temp_profiles.put(profile.0,profile.1);
+                profiles.put(profile.0,profile.1);
+            };  
+            
+        };
+
+
+        public func setStableUserAddressStore(stableUserAddressStore:[(Text,Principal)]):(){
+  
+            for(userAddress:(Text,Principal) in Iter.fromArray(stableUserAddressStore)){
+                userAddressToIdMap.put(userAddress.0,userAddress.1);
             };
-            profiles:=temp_profiles;
+
         };
 
 
         public func getStableProfiles():[(Principal,T.Profile)]{
             return Iter.toArray(profiles.entries());
+        };
+
+        public func getStableUserAddressStore():[(Text,Principal)]{
+            return Iter.toArray(userAddressToIdMap.entries());
         };
 
     };
