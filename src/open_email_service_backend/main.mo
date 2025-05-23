@@ -68,8 +68,13 @@ actor {
   };
 
 
-  public shared({caller}) func getMailById(mailId:Text): async Result.Result<EmailTypes.EmailBodyResponseDTO,EmailTypes.EmailErrors>{
+  public shared({caller}) func getMailById(mailId:Text): async Result.Result<[EmailTypes.EmailBodyResponseDTO],EmailTypes.EmailErrors>{
     return emailManager.getMailById(caller,mailId);
+  };
+
+  //only for testing purposes.
+  public query func getThreads(headMailId:Text): async ?EmailTypes.Thread{
+    return emailManager.getThreadIds(headMailId);
   };
 
 
