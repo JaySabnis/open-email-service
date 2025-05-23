@@ -13,6 +13,7 @@ import Order "mo:base/Order";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Buffer "mo:base/Buffer";
+import Trie "mo:base/Trie";
 
 import Utils "../../utils/helper";
 
@@ -26,6 +27,7 @@ module {
 
         private var emailStore : TrieMap.TrieMap<Text, T.Email> = TrieMap.TrieMap<Text, T.Email>(Text.equal, Text.hash);
         private var fileStore : TrieMap.TrieMap<Text, T.File> = TrieMap.TrieMap<Text, T.File>(Text.equal, Text.hash);
+        private var threads : TrieMap.TrieMap<Text, T.Thread> = TrieMap.TrieMap<Text, T.Thread>(Text.equal, Text.hash);
         private var registry : TrieMap.TrieMap<Principal, T.EmailRegistry> = TrieMap.TrieMap<Principal, T.EmailRegistry>(Principal.equal, Principal.hash);
 
         public func sendEmail(senderAddress : ?Text, senderPrincipalId : Principal, recipientPrinicpalIdOpt : ?Principal, mail : T.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
@@ -47,6 +49,12 @@ module {
                 return #err(#ErrorSelfTransfer);
             };
 
+            let parentMailId : ?Text = if (mail.isReply) {
+                mail.parentMailId;
+            } else {
+                null; // todo throw error saying parent id doesnt exit for reply.
+            };
+
             let emailRequest : T.Email = {
                 from = Option.get(senderAddress, "");
                 to = mail.to;
@@ -54,10 +62,22 @@ module {
                 body = mail.body;
                 attachmentIds = mail.attachmentIds;
                 createdOn = Time.now();
+                isReply = mail.isReply;
+                parentMailId = parentMailId; // add only if thread exist.
             };
 
             //add email to the email store
             emailStore.put(uuidKey, emailRequest);
+
+            //create thread.// need to optimise the function.
+            switch (parentMailId) {
+                case (?pid) {
+                    createThread(uuidKey, pid); // only called if parentMailId exists
+                };
+                case null {
+                    // do nothing or fallback logic
+                };
+            };
 
             //add it to senders outbox
             let senderRegistry : ?T.EmailRegistry = registry.get(senderPrincipalId);
@@ -120,6 +140,34 @@ module {
             return #ok(emailRequest);
         };
 
+        // Create a thread of mails
+        public func createThread(mailId : Text, parentMailId : Text) : () {
+
+            let emailThread : ?T.Thread = threads.get(parentMailId);
+            switch (emailThread) {
+                case (?existingThread) {
+                    let updatedReplyMailIdList : [Text] = Array.append(existingThread.replyMailIds, [mailId]); //todo:in case of duplicate reply ids , need to add condition to check if that paricular id exist or not.
+                    let updatedThread : T.Thread = {
+                        headMailId = existingThread.headMailId;
+                        replyMailIds = updatedReplyMailIdList;
+                        isNewMailAdded = true;
+                    };
+                    threads.put(parentMailId, updatedThread);
+                };
+
+                //create new thread in case it doesnt exist
+                case null {
+                    let newReplyMailIdList : [Text] = [mailId];
+                    let newThread : T.Thread = {
+                        headMailId = parentMailId;
+                        replyMailIds = newReplyMailIdList;
+                        isNewMailAdded = true;
+                    };
+                    threads.put(parentMailId, newThread);
+                };
+            };
+        };
+
         //get list of recevied mails
         public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
             //authenticate user when fetching the emails.
@@ -128,40 +176,65 @@ module {
                 case null List.nil();
             };
 
+            // todo:instead of fetching all mails just fetch latest mails
             let emails = List.mapFilter<Text, T.EmailResponseDTO>(
                 receviedEmailIds,
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
+                            if (not email.isReply) {
+                                let responseEmail : T.EmailResponseDTO = {
+                                    id = id;
+                                    from = email.from;
+                                    to = email.to;
+                                    subject = email.subject;
+                                    createdOn = email.createdOn;
+                                    starred = false;
+                                    readFlag = false;
+                                };
 
-                            let responseEmail : T.EmailResponseDTO = {
-                                id = id;
-                                from = email.from;
-                                to = email.to;
-                                subject = email.subject;
-                                createdOn = email.createdOn;
-                                starred = false;
-                                readFlag = false;
+                                return ?responseEmail;
+                            } else {// if reply exist show main head mail so when opened it will show full thread.df
+                                switch (email.parentMailId) {
+                                    case (?parentMailId) {
+                                        switch (emailStore.get(parentMailId)) {
+                                            case (?parentMail) {
+                                                let responseEmail : T.EmailResponseDTO = {
+                                                    id = parentMailId;
+                                                    from = parentMail.from;
+                                                    to = parentMail.to;
+                                                    subject = parentMail.subject;
+                                                    createdOn = parentMail.createdOn;
+                                                    starred = false;
+                                                    readFlag = false;
+                                                };
+                                                return ?responseEmail;
+
+                                            };
+                                            case null null;
+                                        };
+                                    };
+                                    case null null;
+                                };
                             };
-
-                            return ?responseEmail;
 
                         }; // Extract the email if it exists
                         case null null; // Skip if the email is null
                     };
                 },
             );
-            
+
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber,1), Option.get(pageSize,10), emails, false); 
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, false);
 
         };
 
         //get list of sent mails
         public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
-            
+
             //authenticate user when fetching the emails.
             let sentEmailIds : List.List<Text> = switch (registry.get(caller)) {
+                //todo: add logic to only fetch latest mails and not whole list.
                 case (?emailRegistry) emailRegistry.outbox;
                 case null List.nil();
             };
@@ -171,18 +244,21 @@ module {
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
+                            if (not email.isReply) {
+                                let responseEmail : T.EmailResponseDTO = {
+                                    id = id;
+                                    from = email.from;
+                                    to = email.to;
+                                    subject = email.subject;
+                                    createdOn = email.createdOn;
+                                    starred = false;
+                                    readFlag = false;
+                                };
 
-                            let responseEmail : T.EmailResponseDTO = {
-                                id = id;
-                                from = email.from;
-                                to = email.to;
-                                subject = email.subject;
-                                createdOn = email.createdOn;
-                                starred = false;
-                                readFlag = false;
-                            };
-
-                            return ?responseEmail;
+                                return ?responseEmail;
+                            } else {
+                                return null;
+                            }
 
                         }; // Extract the email if it exists
                         case null null; // Skip if the email is null
@@ -191,14 +267,16 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber,1), Option.get(pageSize,10), emails, true);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, true);
 
         };
 
         private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, emails : List.List<T.EmailResponseDTO>, isOutboxRequest : Bool) : [T.EmailResponseDTO] {
 
             // Safely decrements pageNumber (returns 0 if pageNumber is 0)
-            let adjustedPageNumber : Nat = if( Nat.greater(pageNumber,0) ){ Nat.sub(pageNumber,1) }else{ 0 };
+            let adjustedPageNumber : Nat = if (Nat.greater(pageNumber, 0)) {
+                Nat.sub(pageNumber, 1);
+            } else { 0 };
 
             let allEmails = List.toArray(emails);
 
@@ -252,11 +330,21 @@ module {
                     };
 
                     // Return updated email with processed flags
-                    {
+                    let emailBaseDTO : T.EmailResponseDTO = {
                         email with
                         readFlag = readFlag;
                         starred = isStarred;
-                    }
+                    };
+
+                    // let hasUnreadReplies : Bool = switch (threads.get(email.id)) {
+                    //     case (?threadData) threadData.isNewMailAdded;
+                    //     case null false;
+                    // };
+
+                    // let emailResponseDTO : T.Em = {
+                    //     baseDto = emailBaseDTO;
+                    //     // hasUnreadReplies = hasUnreadReplies;
+                    // }
 
                 },
             );
@@ -291,49 +379,72 @@ module {
 
         };
 
-        public func getMailById(caller : Principal, emailId : Text) : Result.Result<T.EmailBodyResponseDTO, T.EmailErrors> {
-
+        public func getMailById(caller : Principal, emailId : Text) : Result.Result<[T.EmailBodyResponseDTO], T.EmailErrors> {
             let savedEmail : ?T.Email = emailStore.get(emailId);
             switch (savedEmail) {
                 case (?email) {
-                    let attachmentsBuffer = Buffer.Buffer<T.FileResponseDTO>(email.attachmentIds.size());
+                    // Start building the full email thread response
+                    var emailThreadIds : [Text] = switch (threads.get(emailId)) {
+                        case (?thread) Array.append([thread.headMailId], thread.replyMailIds);
+                        case null [emailId]; // fallback if thread not found
+                    };
 
-                    for (fileId in email.attachmentIds.vals()) {
-                        switch (fileStore.get(fileId)) {
-                            case (?file) {
-                                attachmentsBuffer.add({
-                                    fileId = fileId;
-                                    fileName = file.fileName;
-                                    size = file.size;
+                    // Always include the main emailId at the front (in case not already included)
+                    if (Array.find(emailThreadIds, func(id : Text) : Bool { id == emailId }) == null) {
+                        emailThreadIds := Array.append([emailId], emailThreadIds);
+                    };
+
+                    let threadBuffer = Buffer.Buffer<T.EmailBodyResponseDTO>(emailThreadIds.size());
+
+                    for (id in emailThreadIds.vals()) {
+                        switch (emailStore.get(id)) {
+                            case (?threadEmail) {
+                                let attachmentsBuffer = Buffer.Buffer<T.FileResponseDTO>(threadEmail.attachmentIds.size());
+                                for (fileId in threadEmail.attachmentIds.vals()) {
+                                    switch (fileStore.get(fileId)) {
+                                        case (?file) {
+                                            attachmentsBuffer.add({
+                                                fileId = fileId;
+                                                fileName = file.fileName;
+                                                size = file.size;
+                                            });
+                                        };
+                                        case null {};
+                                    };
+                                };
+
+                                let attachments : [T.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
+
+                                threadBuffer.add({
+                                    id = id;
+                                    from = threadEmail.from;
+                                    to = threadEmail.to;
+                                    subject = threadEmail.subject;
+                                    body = threadEmail.body;
+                                    attachments = ?attachments;
+                                    createdOn = threadEmail.createdOn;
+                                    starred = false;
+                                    readFlag = true;
                                 });
+
+                                // Mark this email as read
+                                markAsRead(caller, id);
                             };
-                            case null {}; // do nothing, skip missing files
+                            case null {};
                         };
                     };
-                    
-                    //convert buffer to array list.
-                    let attachments : [T.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
 
-                    let emailRespose : T.EmailBodyResponseDTO = {
-                        id = emailId;
-                        from = email.from;
-                        to = email.to;
-                        subject = email.subject;
-                        body = email.body;
-                        attachments = ?attachments;
-                        createdOn = email.createdOn;
-                        starred = false; //todo:add logic later to make it highlighted if needed from FE.
-                        readFlag = true;
-                    };
-
-                    //mark it as read
-                    markAsRead(caller, emailId);
-                    return #ok(emailRespose);
+                    return #ok(Buffer.toArray(threadBuffer));
                 };
+                case null return #err(#NotFound);
+            };
+        };
 
-                case null #err(#NotFound);
-            }
-
+        public func getThreadIds(headMailId : Text) : ?T.Thread {
+            switch (threads.get(headMailId)) {
+                case (?emailThread) ?emailThread;
+                case null null;
+            };
         };
 
         //mark email as read
@@ -366,6 +477,7 @@ module {
         };
 
         //delete all mails for the caller while deleting the profile.
+        //todo: add logic to delete threads as well along with mail.
         public func deleteMails(caller : Principal) : () {
             switch (registry.get(caller)) {
                 case (?_) registry.delete(caller);
@@ -397,16 +509,16 @@ module {
 
         //Multimedia file handling methods.
 
-        public func uploadFile(uploadedFile:T.FileRequestDTO) : async Result.Result<T.FileResponseDTO, T.FileErrors> {
+        public func uploadFile(uploadedFile : T.FileRequestDTO) : async Result.Result<T.FileResponseDTO, T.FileErrors> {
 
             //generate new uuid key
             var uuidKey : Text = await utils.generateUUID();
-            let file:T.File={
-                fileId=uuidKey;
-                fileName=uploadedFile.fileName;
-                contentType=uploadedFile.contentType;
-                size=uploadedFile.filedata.size();
-                filedata=uploadedFile.filedata;
+            let file : T.File = {
+                fileId = uuidKey;
+                fileName = uploadedFile.fileName;
+                contentType = uploadedFile.contentType;
+                size = uploadedFile.filedata.size();
+                filedata = uploadedFile.filedata;
 
             };
             fileStore.put(uuidKey, file);
