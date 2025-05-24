@@ -7,13 +7,14 @@
   export let isSidebarOpen = false;
   export let toggleSidebar;
 
-  let currentTheme;
-  let currentColors;
-
+   let currentTheme = 'light';
+  let currentColors = colors.light;
+  let btnBgColor = currentColors?.btn;
   const unsubscribeTheme = theme.subscribe(value => {
     currentTheme = value;
     const colorsValue = get(colors);
     currentColors = colorsValue[currentTheme];
+    btnBgColor = currentColors.btn; 
     if (typeof window !== "undefined") {
       document.documentElement.classList.toggle('dark', value === 'dark');
     }
@@ -27,6 +28,15 @@
   onDestroy(() => {
     unsubscribeTheme();
   });
+
+   function handleMouseEnter() {
+    btnBgColor = currentColors.btnHover;
+  }
+
+  function handleMouseLeave() {
+    btnBgColor = currentColors.btn;
+  }
+
 </script>
 
 <div
@@ -62,6 +72,18 @@
       {#if isSidebarOpen || (typeof window !== 'undefined' && window.innerWidth >= 768)}
         <nav class="p-4 mt-8">
           <ul class="space-y-2">
+             <li>
+                <a
+                href="/send"
+                class="font-semibold py-2 px-4 rounded shadow transition"
+                style="background-color: {btnBgColor}; color: {currentColors.btnText};"
+                on:mouseenter={handleMouseEnter}
+                on:mouseleave={handleMouseLeave}
+              >
+                Send Email
+              </a>
+            </li>
+
             <li>
               <a 
                 href="/" 

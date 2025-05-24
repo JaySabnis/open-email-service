@@ -21,7 +21,10 @@ export class MailService {
     let dto = {
       to: emailData.to,
       subject: emailData.subject,
-      body: emailData.body
+      body: emailData.body,
+      attachmentIds : emailData.attachmentIds || null,
+      isReply: emailData.isReply,
+      parentMailId: emailData.parentMailId || null
     };
 
     const result = await identityActor.sendEmail(dto);

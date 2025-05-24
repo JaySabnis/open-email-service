@@ -63,7 +63,7 @@
     <Sidebar {isSidebarOpen} {toggleSidebar} />
   {/if}
 
-  <div class="flex-1 flex flex-col w-full" style="
+  <div class=" flex flex-col w-full" style="
           background-color: {currentColors.bgLightColor};
           color: {currentColors.color};
           border-color: {currentColors.color};
@@ -112,7 +112,7 @@
       </div>
     {/if}
 
-    <main class="flex-1 p-4">
+    <main class="">
       <slot></slot>
     </main>
   </div>
@@ -130,9 +130,6 @@
     min-height: 100vh;
   }
 
-  .content {
-    flex: 1;
-  }
 
   .login-prompt {
     text-align: center;
