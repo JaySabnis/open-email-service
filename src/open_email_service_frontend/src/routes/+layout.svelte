@@ -5,7 +5,9 @@
   import Navbar from "$lib/components/navbar.svelte";
   import { onMount } from "svelte";
   import { loadUserProfile } from "$lib/store/user";
-
+  import { theme } from "$lib/store/theme";
+  import { colors } from "$lib/store/colors";
+  import { get } from 'svelte/store';
   import "../app.css";
 
   let isSidebarOpen = false;
@@ -14,6 +16,24 @@
 
   $: isAuthenticated = $authSignedInStore;
 
+  let currentTheme;
+  let currentColors;
+
+
+
+  const unsubscribeTheme = theme.subscribe(value => {
+    currentTheme = value;
+    const colorsValue = get(colors);
+    currentColors = colorsValue[currentTheme];
+    if (typeof window !== "undefined") {
+      if (value === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  });
+  
   onMount(() => {
     if (!isAuthenticated) {
       goto("/");
@@ -33,27 +53,42 @@
   };
 </script>
 
-<div class="flex min-h-screen">
+
+<div class="flex min-h-screen" style="
+          background-color: {currentColors.bgLightColor};
+          color: {currentColors.color};
+          border-color: {currentColors.color};
+        ">
   {#if isAuthenticated}
     <Sidebar {isSidebarOpen} {toggleSidebar} />
   {/if}
 
-  <div class="flex-1 flex flex-col w-full">
+  <div class=" flex flex-col w-full" style="
+          background-color: {currentColors.bgLightColor};
+          color: {currentColors.color};
+          border-color: {currentColors.color};
+        ">
     {#if isAuthenticated}
-      <Navbar />
+      <Navbar {currentColors} />
     {/if}
 
     {#if isAuthenticated}
       <div
-        class="w-full bg-gray-100  border-gray-300 p-2 flex items-center"
+        class="w-full border-gray-300 p-2 flex items-center"
+        style="
+          background-color: {currentColors.surface};
+          color: {currentColors.color};
+          border-color: {currentColors.color};
+        "
       >
-        <button
-          class="p-2 bg-gray-200 rounded-md"
+       <button
+          class="p-2 rounded-md"
+          style="background-color: {currentColors.bgLightColor}; color: {currentColors.color};"
           aria-label="Toggle Sidebar"
           on:click={toggleSidebar}
         >
           <svg
-            class="w-4 h-4 text-gray-700"
+            class="w-4 h-4"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
@@ -71,11 +106,13 @@
             {/if}
           </svg>
         </button>
-        <span class="ml-2 text-sm text-gray-700">Menu</span>
+        <span class="ml-2 text-sm">
+          Menu
+        </span>
       </div>
     {/if}
 
-    <main class="flex-1 p-4">
+    <main class="">
       <slot></slot>
     </main>
   </div>
@@ -83,15 +120,16 @@
 
 <style>
   @reference "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
   .layout-container {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
   }
 
-  .content {
-    flex: 1;
-  }
 
   .login-prompt {
     text-align: center;
