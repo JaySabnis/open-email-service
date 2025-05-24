@@ -19,14 +19,7 @@ module {
         //add parent mail id for threading
     };
 
-    public type SendEmailDTO = {
-        to : Text;
-        subject : Text;
-        body : Text;
-        attachmentIds : [Text];
-        isReply : Bool;
-        parentMailId : ?Text;
-    };
+
 
     public type EmailResponseDTO = {
         id : Text;
@@ -39,18 +32,6 @@ module {
         //add parent mail id for threading
     };
 
-    public type EmailBodyResponseDTO = {
-        id : Text;
-        from : Text;
-        to : Text;
-        subject : Text;
-        body : Text;
-        attachments : ?[FileResponseDTO];
-        createdOn : Timestamp;
-        starred : Bool;
-        readFlag : Bool;
-        //add parent mail id for threading
-    };
 
     public type EmailThreadResponseDTO = {
        baseDto:EmailResponseDTO;
@@ -85,17 +66,9 @@ module {
         filedata : Blob;
     };
 
-    public type FileRequestDTO = {
-        fileName : Text;
-        contentType : Text;
-        filedata : Blob;
-    };
 
-    public type FileResponseDTO = {
-        fileId : Text;
-        fileName : Text;
-        size : Nat;
-    };
+
+
 
     public type FileErrors = {
         #NotFound;

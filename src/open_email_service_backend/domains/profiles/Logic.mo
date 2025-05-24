@@ -7,72 +7,70 @@ import Time "mo:base/Time";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
+import ProfileCommands "../../commands/ProfileCommands";
 
+import T "./Types";
+module {
 
-import T "Types";
-
-module{
-
-    public class ProfileManager(){
+    public class ProfileManager() {
 
         //hashmap <Principal, Profile>
-        public var profiles:TrieMap.TrieMap<Principal,T.Profile> = TrieMap.TrieMap<Principal,T.Profile>(Principal.equal, Principal.hash);
-        private var userAddressToIdMap:TrieMap.TrieMap<Text,Principal> = TrieMap.TrieMap<Text,Principal>(Text.equal,Text.hash);
-       
+        public var profiles : TrieMap.TrieMap<Principal, T.Profile> = TrieMap.TrieMap<Principal, T.Profile>(Principal.equal, Principal.hash);
+        private var userAddressToIdMap : TrieMap.TrieMap<Text, Principal> = TrieMap.TrieMap<Text, Principal>(Text.equal, Text.hash);
 
         //create profile
-        public func createProfile( caller : Principal, profileDTO : T.CreateProfileDTO ) : T.ProfileResult {
-            
+        public func createProfile(caller : Principal, profileDTO : ProfileCommands.CreateProfileDTO) : T.ProfileResult {
+
             //validate data
-            if(profileDTO.name.size()==0 or profileDTO.surname.size()==0){
+            if (profileDTO.name.size() == 0 or profileDTO.surname.size() == 0) {
                 return #err(#InvalidData("Name and surname cannot be empty"));
             };
-            
+
             //validate description
-            switch(profileDTO.description){
-                
-                case(?text) if (text.size() > 1000){
+            switch (profileDTO.description) {
+
+                case (?text) if (text.size() > 1000) {
                     return #err(#InvalidData("Description should not exceed 1000 characters!."));
                 };
 
-                case _ {};   
+                case _ {};
             };
 
             //check if user address is taken
-            let isUserAddressTaken:Bool=not isUserAddressAvailable(profileDTO.userAddress);
-            if(isUserAddressTaken){
+            let isUserAddressTaken : Bool = not isUserAddressAvailable(profileDTO.userAddress);
+            if (isUserAddressTaken) {
                 return #err(#AlreadyExists("User address already taken. Please choose another. "));
             };
 
-            //check if user has already registered 
-            let ifUserExist=profiles.get(caller);
+            //check if user has already registered
+            let ifUserExist = profiles.get(caller);
 
-            switch(ifUserExist) {
-               
-                case(?ifUserExist) { 
-                     return #err(#AlreadyExists("User with this id already exist!."));
-                 };    
-                
-                case(null) {
-                    let saveProfile : T.Profile = {
-                                        id=caller;
-                                        name=profileDTO.name;
-                                        surname=profileDTO.surname;
-                                        userAddress=profileDTO.userAddress;
-                                        status=profileDTO.status;
-                                        description=profileDTO.description;
-                                        profileImage=profileDTO.profileImage;
-                                        createdOn=Time.now();
-                                        modifiedOn=Time.now();
-                                    };
-                    profiles.put(caller,saveProfile);
-                    userAddressToIdMap.put(profileDTO.userAddress,caller);
-                    return #ok;   
+            switch (ifUserExist) {
+
+                case (?ifUserExist) {
+                    return #err(#AlreadyExists("User with this id already exist!."));
                 };
-            };   
+
+                case (null) {
+                    let saveProfile : T.Profile = {
+                        id = caller;
+                        name = profileDTO.name;
+                        surname = profileDTO.surname;
+                        userAddress = profileDTO.userAddress;
+                        status = profileDTO.status;
+                        description = profileDTO.description;
+                        profileImage = profileDTO.profileImage;
+                        createdOn = Time.now();
+                        modifiedOn = Time.now();
+                    };
+                    profiles.put(caller, saveProfile);
+                    userAddressToIdMap.put(profileDTO.userAddress, caller);
+                    return #ok;
+                };
+            };
         };
-    
-        public func updateProfile(caller : Principal, profileDTO : T.UpdateProfileDTO) : Result.Result<T.Profile, T.ProfileError> {
+
+        public func updateProfile(caller : Principal, profileDTO : ProfileCommands.UpdateProfileDTO) : Result.Result<T.Profile, T.ProfileError> {
             let savedProfile = profiles.get(caller);
             switch (savedProfile) {
                 case (?profile) {
@@ -84,15 +82,15 @@ module{
                         userAddress = profile.userAddress;
                         status = ?Option.get(profileDTO.status, "");
                         description = ?Option.get(profileDTO.description, "");
-                        profileImage = ?Option.get(profileDTO.profileImage,Blob.fromArray([]));
+                        profileImage = ?Option.get(profileDTO.profileImage, Blob.fromArray([]));
                         createdOn = profile.createdOn;
-                        modifiedOn=Time.now();
+                        modifiedOn = Time.now();
                     };
 
-                    profiles.put(caller,updatedProfile);
+                    profiles.put(caller, updatedProfile);
                     return #ok(updatedProfile);
                 };
-                
+
                 case (null) {
                     return #err(#NotFound);
                 };
@@ -100,11 +98,10 @@ module{
 
         };
 
-
         //Get Profile
-        public func getProfile(caller:Principal) :  Result.Result<T.Profile,T.ProfileError>{
+        public func getProfile(caller : Principal) : Result.Result<T.Profile, T.ProfileError> {
             let result = profiles.get(caller);
-            switch(result){
+            switch (result) {
                 case (?profile) {
                     return #ok(profile);
                 };
@@ -114,32 +111,31 @@ module{
             };
         };
 
-
         //Get Principal Id using userAddress
-        public func getPrincipalId(userAddress:Text):?Principal{
-            let principalId:?Principal=userAddressToIdMap.get(userAddress);
+        public func getPrincipalId(userAddress : Text) : ?Principal {
+            let principalId : ?Principal = userAddressToIdMap.get(userAddress);
             return principalId;
         };
 
         //check if principal id is taken by someone
-        public func isUserAddressAvailable(userAddress:Text):Bool{
-            switch(userAddressToIdMap.get(userAddress)){
-                case(?_) false;
+        public func isUserAddressAvailable(userAddress : Text) : Bool {
+            switch (userAddressToIdMap.get(userAddress)) {
+                case (?_) false;
                 case null true;
             };
         };
 
         //Get Principal Id using userAddress
-        public func getUserAddress(caller:Principal) : ?Text{
-            let profile=profiles.get(caller);
-            switch(profile){
-                case(?profile) ?profile.userAddress;
-                case(null) null;
-            };     
+        public func getUserAddress(caller : Principal) : ?Text {
+            let profile = profiles.get(caller);
+            switch (profile) {
+                case (?profile) ?profile.userAddress;
+                case (null) null;
+            };
         };
 
         //Delete Profile
-        public func deleteProfile(caller:Principal) : T.ProfileResult{
+        public func deleteProfile(caller : Principal) : T.ProfileResult {
             switch (profiles.get(caller)) {
                 case (?profile) {
                     userAddressToIdMap.delete(profile.userAddress);
@@ -147,40 +143,35 @@ module{
                     #ok;
                 };
                 case null {
-                    #err(#NotFound); 
+                    #err(#NotFound);
                 };
             };
         };
 
+        public func setStableProfile(stableProfile : [(Principal, T.Profile)]) : () {
 
-        public func setStableProfile(stableProfile:[(Principal,T.Profile)]):(){
-        
-            for(profile:(Principal,T.Profile) in Iter.fromArray(stableProfile)){
-                profiles.put(profile.0,profile.1);
-            };  
-            
-        };
-
-
-        public func setStableUserAddressStore(stableUserAddressStore:[(Text,Principal)]):(){
-  
-            for(userAddress:(Text,Principal) in Iter.fromArray(stableUserAddressStore)){
-                userAddressToIdMap.put(userAddress.0,userAddress.1);
+            for (profile : (Principal, T.Profile) in Iter.fromArray(stableProfile)) {
+                profiles.put(profile.0, profile.1);
             };
 
         };
 
+        public func setStableUserAddressStore(stableUserAddressStore : [(Text, Principal)]) : () {
 
-        public func getStableProfiles():[(Principal,T.Profile)]{
+            for (userAddress : (Text, Principal) in Iter.fromArray(stableUserAddressStore)) {
+                userAddressToIdMap.put(userAddress.0, userAddress.1);
+            };
+
+        };
+
+        public func getStableProfiles() : [(Principal, T.Profile)] {
             return Iter.toArray(profiles.entries());
         };
 
-        public func getStableUserAddressStore():[(Text,Principal)]{
+        public func getStableUserAddressStore() : [(Text, Principal)] {
             return Iter.toArray(userAddressToIdMap.entries());
         };
 
     };
 
-
 };
-
