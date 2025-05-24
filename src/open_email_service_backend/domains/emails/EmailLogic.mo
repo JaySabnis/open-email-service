@@ -16,9 +16,8 @@ import Buffer "mo:base/Buffer";
 import Trie "mo:base/Trie";
 
 import Utils "../../utils/helper";
-import EmailCommands "../../commands/EmailCommands";
+
 import T "EmailTypes";
-import EmailQueries "../../queries/EmailQueries";
 
 module {
 
@@ -31,13 +30,22 @@ module {
         private var threads : TrieMap.TrieMap<Text, T.Thread> = TrieMap.TrieMap<Text, T.Thread>(Text.equal, Text.hash);
         private var registry : TrieMap.TrieMap<Principal, T.EmailRegistry> = TrieMap.TrieMap<Principal, T.EmailRegistry>(Principal.equal, Principal.hash);
 
-        public func sendEmail(senderAddress : Text, senderPrincipalId : Principal, recipientPrinicpalId : Principal, mail : EmailCommands.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
+        public func sendEmail(senderAddress : ?Text, senderPrincipalId : Principal, recipientPrinicpalIdOpt : ?Principal, mail : T.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
             //generate new uuid key
             var uuidKey : Text = await utils.generateUUID();
 
+            let recipientPrinicpalId : Principal = Option.get(recipientPrinicpalIdOpt, Principal.fromText("aaaaa-aa"));
 
             //determine if sender or reciver is valid
-            if (senderAddress == mail.to) {
+            if (senderAddress == null or recipientPrinicpalId == Principal.fromText("aaaaa-aa")) {
+                return #err(#AnonymousCaller);
+            };
+
+            if (recipientPrinicpalIdOpt == null) {
+                return #err(#InvalidRecipientAddress);
+            };
+
+            if (senderAddress == ?mail.to) {
                 return #err(#ErrorSelfTransfer);
             };
 
@@ -48,7 +56,7 @@ module {
             };
 
             let emailRequest : T.Email = {
-                from = senderAddress;
+                from = Option.get(senderAddress, "");
                 to = mail.to;
                 subject = mail.subject;
                 body = mail.body;
@@ -371,7 +379,7 @@ module {
 
         };
 
-        public func getMailById(caller : Principal, emailId : Text) : Result.Result<[EmailQueries.EmailBodyResponseDTO], T.EmailErrors> {
+        public func getMailById(caller : Principal, emailId : Text) : Result.Result<[T.EmailBodyResponseDTO], T.EmailErrors> {
             let savedEmail : ?T.Email = emailStore.get(emailId);
             switch (savedEmail) {
                 case (?email) {
@@ -386,12 +394,12 @@ module {
                         emailThreadIds := Array.append([emailId], emailThreadIds);
                     };
 
-                    let threadBuffer = Buffer.Buffer<EmailQueries.EmailBodyResponseDTO>(emailThreadIds.size());
+                    let threadBuffer = Buffer.Buffer<T.EmailBodyResponseDTO>(emailThreadIds.size());
 
                     for (id in emailThreadIds.vals()) {
                         switch (emailStore.get(id)) {
                             case (?threadEmail) {
-                                let attachmentsBuffer = Buffer.Buffer<EmailQueries.FileResponseDTO>(threadEmail.attachmentIds.size());
+                                let attachmentsBuffer = Buffer.Buffer<T.FileResponseDTO>(threadEmail.attachmentIds.size());
                                 for (fileId in threadEmail.attachmentIds.vals()) {
                                     switch (fileStore.get(fileId)) {
                                         case (?file) {
@@ -405,7 +413,7 @@ module {
                                     };
                                 };
 
-                                let attachments : [EmailQueries.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
+                                let attachments : [T.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
 
                                 threadBuffer.add({
                                     id = id;
@@ -501,7 +509,7 @@ module {
 
         //Multimedia file handling methods.
 
-        public func uploadFile(uploadedFile : EmailCommands.FileRequestDTO) : async Result.Result<EmailQueries.FileResponseDTO, T.FileErrors> {
+        public func uploadFile(uploadedFile : T.FileRequestDTO) : async Result.Result<T.FileResponseDTO, T.FileErrors> {
 
             //generate new uuid key
             var uuidKey : Text = await utils.generateUUID();
