@@ -13,14 +13,20 @@ function createProfilStore() {
     return new ProfileService().getProfile();
   }
 
-  async function updateProfile() {
-    return new ProfileService().updateProfile();
+  async function updateProfile(data) {
+    return new ProfileService().updateProfile(data);
   }
+
+  async function isUserAddressAvailable(userAddress){
+    return new ProfileService().isUserAddressAvailable(userAddress);
+  }
+
   return {
     createProfile,
     getProfile,
     updateProfile,
     subscribe,
+    isUserAddressAvailable
   };
 }
 

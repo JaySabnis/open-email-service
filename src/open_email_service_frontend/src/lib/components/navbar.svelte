@@ -1,52 +1,44 @@
 <script>
-  import { signOut } from "$lib/services/auth.services";
-  import { goto } from "$app/navigation";
+  import { onMount, onDestroy } from 'svelte';
+  import { goto } from '$app/navigation';
 
-  let menuOpen = false; 
+  let profile;
 
-  function toggleDropdown() {
-    menuOpen = !menuOpen; 
+  function updateProfileFromStorage() {
+    const cached = JSON.parse(localStorage.getItem('userProfileCache'));
+    profile = cached?.data || null;
   }
 
-  async function handleSignOut() {
-    await signOut();
-    goto('/');
+  onMount(() => {
+    updateProfileFromStorage();
+    window.addEventListener('profileUpdated', updateProfileFromStorage);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('profileUpdated', updateProfileFromStorage);
+  });
+
+  function goToProfile() {
+    goto('/profile');
   }
 </script>
 
-<div class="relative">
-  <nav class="bg-blue-600 p-4 flex justify-end items-center">
-
-    <div class="relative">
-      <button
-        class="text-white focus:outline-none"
-        on:click={toggleDropdown}
-        aria-label="Menu"
-      >
-        {#if menuOpen}
-          <div>X</div>
-        {:else}
-          <div class="w-2.5 h-0.5 bg-white mb-1.5"></div>
-          <div class="w-2.5 h-0.5 bg-white mb-1.5"></div>
-          <div class="w-2.5 h-0.5 bg-white"></div>
-        {/if}
-      </button>
-
-      {#if menuOpen}
-        <div
-          id="dropdownMenu"
-          class="absolute right-0 mt-2 w-40 bg-white shadow-md rounded-md"
-        >
-          <ul>
-            <li>
-              <a href="/profile" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Profile</a>
-            </li>
-            <li>
-              <button on:click={handleSignOut} class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Sign Out</button>
-            </li>
-          </ul>
-        </div>
-      {/if}
-    </div>
-  </nav>
-</div>
+<nav class="bg-blue-600 h-12 md:h-14 px-4 flex items-center justify-end shadow-md">
+  <button
+    on:click={goToProfile}
+    class="focus:outline-none rounded-full overflow-hidden border-2 border-white w-10 h-10"
+    aria-label="Go to Profile"
+  >
+    {#if profile?.profileImage}
+      <img
+        src={profile?.profileImage}
+        alt="User Profile"
+        class="w-full h-full object-cover cursor-pointer"
+      />
+    {:else}
+      <div class="bg-gray-300 w-full h-full flex items-center justify-center text-blue-600 font-bold">
+        U
+      </div>
+    {/if}
+  </button>
+</nav>

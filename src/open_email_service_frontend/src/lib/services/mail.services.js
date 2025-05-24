@@ -4,12 +4,12 @@ import { authStore } from "../store/auth-store";
 export class MailService {
   constructor() { }
 
-  async fetchInboxMails() {
+  async fetchInboxMails(pageNumber,pageSize) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
-    const result = await identityActor.fetchInboxMails();
+    const result = await identityActor.fetchInboxMails(pageNumber,pageSize);
     return result;
   }
 

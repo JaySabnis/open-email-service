@@ -5,8 +5,8 @@ import { MailService } from "../services/mail.services";
 function mailStore() {
   const { subscribe, set } = writable(undefined);
 
-  async function fetchInboxMails() {
-    return new MailService().fetchInboxMails();
+  async function fetchInboxMails(pageNumber, pageSize) {
+    return new MailService().fetchInboxMails(pageNumber,pageSize);
   }
 
   async function sendEmails(emailData) {
@@ -21,7 +21,7 @@ function mailStore() {
     fetchInboxMails,
     sendEmails,
     fetchOutboxMails,
-    subscribe,
+    subscribe
   };
 }
 

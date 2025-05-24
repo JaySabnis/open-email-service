@@ -54,7 +54,7 @@ const initAuthStore = () => {
                 ...state,
                 identity: null,
             }));
-            localStorage.removeItem("user_profile_data");
+            localStorage.removeItem("userProfileCache");
         },
     };
 };

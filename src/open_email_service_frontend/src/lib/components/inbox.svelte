@@ -4,12 +4,14 @@
   import Loader from "$lib/components/loader.svelte";
 
   let mails;
-  let loading = true;
+  let loading = false;
   async function getInboxMails() {
     loading = true;
-    mails = await mailsStore.fetchInboxMails();
-    const outgoingMails = await mailsStore.fetchOutboxMails();
-    // console.log(mails[0], outgoingMails, "mails");
+    const pageNumber=0;
+    const pageSize= 10;
+    mails = await mailsStore.fetchInboxMails(pageNumber,pageSize);
+    // const outgoingMails = await mailsStore.fetchOutboxMails();
+    console.log(mails[0], "mails");
     loading = false;
   }
 
@@ -20,7 +22,7 @@
 
 {#if loading}
   <Loader message="Fetching your emails..." />
-{:else if Array.isArray(mails[0]) && mails.length}
+{:else if mails && Array.isArray(mails[0]) && mails.length}
   <div class="w-full max-w-3xl mx-auto p-4 space-y-3">
     {#each mails[0] as msg, i}
       <div
