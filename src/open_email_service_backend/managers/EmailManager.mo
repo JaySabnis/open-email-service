@@ -13,12 +13,12 @@ import Order "mo:base/Order";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Buffer "mo:base/Buffer";
-import Trie "mo:base/Trie";
 
-import Utils "../../utils/helper";
-import EmailCommands "../../commands/EmailCommands";
-import T "EmailTypes";
-import EmailQueries "../../queries/EmailQueries";
+import Utils "../utils/helper";
+
+import T "../types/EmailTypes";
+import EmailCommands "../commands/EmailCommands";
+import EmailQueries "../queries/EmailQueries";
 
 module {
 

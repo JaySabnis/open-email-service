@@ -4,14 +4,13 @@ import Text "mo:base/Text";
 import Nat "mo:base/Nat";
 import Bool "mo:base/Bool";
 
-import ProfileLogic "domains/profiles/Logic";
-import ProfileType "domains/profiles/Types";
-
-import EmailTypes "domains/emails/EmailTypes";
-import EmailManager "domains/emails/EmailLogic";
-
+import ProfileManager "/managers/ProfileManager";
+import ProfileType "/types/ProfileTypes";
 import ProfileCommands "commands/ProfileCommands";
 import ProfileQueries "queries/ProfileQueries";
+
+import EmailTypes "/types/EmailTypes";
+import EmailManager "/managers/EmailManager";
 import EmailCommands "commands/EmailCommands";
 import EmailQueries "queries/EmailQueries";
 
@@ -24,7 +23,7 @@ actor {
   stable var stable_userAddressStore : [(Text, Principal)] = [];
 
   //profile manager
-  let profileService = ProfileLogic.ProfileManager();
+  let profileService = ProfileManager.ProfileManager();
 
   //Email Manager
   let emailManager = EmailManager.EmailManager();

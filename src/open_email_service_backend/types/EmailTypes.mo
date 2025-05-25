@@ -19,8 +19,6 @@ module {
         //add parent mail id for threading
     };
 
-
-
     public type EmailResponseDTO = {
         id : Text;
         from : Text;
@@ -31,7 +29,6 @@ module {
         readFlag : Bool;
         //add parent mail id for threading
     };
-
 
     public type EmailThreadResponseDTO = {
        baseDto:EmailResponseDTO;
@@ -65,10 +62,6 @@ module {
         size : Nat;
         filedata : Blob;
     };
-
-
-
-
 
     public type FileErrors = {
         #NotFound;

@@ -7,9 +7,10 @@ import Time "mo:base/Time";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
-import ProfileCommands "../../commands/ProfileCommands";
 
-import T "./Types";
+import T "../types/ProfileTypes";
+import ProfileCommands "../commands/ProfileCommands";
+
 module {
 
     public class ProfileManager() {

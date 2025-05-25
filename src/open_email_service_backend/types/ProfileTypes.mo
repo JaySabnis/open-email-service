@@ -20,10 +20,6 @@ module{
         modifiedOn:Timestamp;
     };
 
-
-
-
-
     // Main error type variant
     public type ProfileError={
         #NotFound;
