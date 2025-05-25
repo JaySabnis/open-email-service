@@ -98,6 +98,18 @@
             </li>
             <li>
               <a 
+                href="/sent" 
+                class="block py-2 px-4 rounded transition hover:bg-opacity-20"
+                style="color: {currentColors?.color};
+                       background-color: {currentTheme === 'dark' ? 'rgba(42, 32, 69, 0.2)' : 'rgba(239, 233, 255, 0.2)'}"
+                on:mouseenter={(e) => e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? 'rgba(42, 32, 69, 0.4)' : 'rgba(239, 233, 255, 0.4)'}
+                on:mouseleave={(e) => e.currentTarget.style.backgroundColor = currentTheme === 'dark' ? 'rgba(42, 32, 69, 0.2)' : 'rgba(239, 233, 255, 0.2)'}
+              >
+                Sent
+              </a>
+            </li>
+            <li>
+              <a 
                 href="/profile" 
                 class="block py-2 px-4 rounded transition hover:bg-opacity-20"
                 style="color: {currentColors?.color};

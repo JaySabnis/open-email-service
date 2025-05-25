@@ -31,13 +31,24 @@ export class MailService {
     return result;
   }
 
-  async fetchOutboxMails() {
+  async fetchOutboxMails(pageNumberParam=null,pageSizeParam=null) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
-    const result = await identityActor.fetchOutboxMails();
+
+    const pageNumber = pageNumberParam || null;
+    const pageSize = pageSizeParam || null;
+    const result = await identityActor.fetchOutboxMails(pageNumber,pageSize);
     return result;
   }
 
+  async getMailById(mailId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.getMailById(mailId);
+    return result;
+  }
 }

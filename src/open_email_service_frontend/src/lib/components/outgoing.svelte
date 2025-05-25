@@ -28,13 +28,13 @@
     const pageNumberOpt = [pageNumber];
     const pageSizeOpt = [pageSize];
 
-    const inboxData = await mailsStore.fetchInboxMails(pageNumberOpt, pageSizeOpt);
+    // const inboxData = await mailsStore.fetchInboxMails(pageNumberOpt, pageSizeOpt);
     const outboxData = await mailsStore.fetchOutboxMails(pageNumberOpt, pageSizeOpt);
 
-    mails = inboxData;
-    hasNextPage = inboxData.length === pageSize;
+    mails = outboxData;
+    hasNextPage = outboxData.length === pageSize;
 
-    // console.log(mails, outboxData, "mails");
+    console.log(mails, outboxData, "mails");
     loading = false;
   }
 
@@ -70,7 +70,7 @@
         "
         on:mouseenter={() => (event.currentTarget.style.boxShadow = `0 0 1px 1px ${currentColors.inputFocus}`)}
         on:mouseleave={() => (event.currentTarget.style.boxShadow = 'none')}
-        on:click={() => goto(`/mails/${msg.id}`)}
+        on:click={() => goto(`/sent/${msg.id}`)}
       >
         <div class="flex-1">
           <p class="font-semibold text-base truncate" style="color: {currentColors.headingColor}">

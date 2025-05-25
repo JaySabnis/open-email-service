@@ -124,14 +124,4 @@
 @tailwind components;
 @tailwind utilities;
 
-  .layout-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-
-  .login-prompt {
-    text-align: center;
-  }
 </style>
