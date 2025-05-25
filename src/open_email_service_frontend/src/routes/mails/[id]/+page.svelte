@@ -8,12 +8,28 @@
   import { get } from "svelte/store";
   import { goto } from '$app/navigation';
   import ReplyPopup from "$lib/components/replyPopup.svelte";
-  
+  import MailThread from "$lib/components/mailThread.svelte";
+
   let showReplyPopup = false;
   let replyData = null;
-
+  let buttonHovering = false;
   let loading = false;
   let mailData;
+  let currentTheme;
+  let currentColors;
+
+  const unsubscribeTheme = theme.subscribe(value => {
+    currentTheme = value;
+    const colorsValue = get(colors);
+    currentColors = colorsValue[currentTheme];
+    if (typeof window !== "undefined") {
+      if (value === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  });
   async function getMailById(id) {
     loading = true;
     mailData = await mailsStore.getMailById(id);
@@ -44,14 +60,20 @@
     {#if loading}
   <Loader message="Fetching email details..." />
 {:else if mailData && Object.keys(mailData).length > 0}
-  <div class="shadow-sm px-4 py-3">
+  <div class="shadow-sm px-4 py-3 cursor-default">
     <h2 class="text-lg font-bold">{mailData.ok[0].subject}</h2>
     <p class="text-sm text-gray-600">From: {mailData.ok[0].from}</p>
     <p class="mt-2 whitespace-pre-wrap">{mailData.ok[0].body}</p>
 
-    <button
-      class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+   <button
+      class="mt-4 px-4 py-2 rounded transition cursor-pointer"
+      style="
+        background-color: {currentColors.btn};
+        color: {currentColors.btnText};
+      "
       on:click={openReplyPopup}
+      on:mouseover={() => buttonHovering = true}
+      on:mouseout={() => buttonHovering = false}
     >
       Reply
     </button>
@@ -63,6 +85,9 @@
       {replyData} 
     />
   {/if}
+  <div class="mt-6">
+      <MailThread mails={mailData.ok.slice(1)} />
+    </div>
 {:else}
   <p class="text-gray-500">No email found.</p>
 {/if}
