@@ -13,6 +13,7 @@ import Order "mo:base/Order";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Buffer "mo:base/Buffer";
+import Debug "mo:base/Debug";
 
 import Utils "../utils/helper";
 
@@ -33,8 +34,7 @@ module {
 
         public func sendEmail(senderAddress : Text, senderPrincipalId : Principal, recipientPrinicpalId : Principal, mail : EmailCommands.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
             //generate new uuid key
-            var uuidKey : Text = await utils.generateUUID();
-
+            var newMailId : Text = await utils.generateUUID();
 
             //determine if sender or reciver is valid
             if (senderAddress == mail.to) {
@@ -44,7 +44,7 @@ module {
             let parentMailId : ?Text = if (mail.isReply) {
                 mail.parentMailId;
             } else {
-                null; // todo throw error saying parent id doesnt exit for reply.
+                return #err(#MissingParentId);
             };
 
             let emailRequest : T.Email = {
@@ -59,77 +59,49 @@ module {
             };
 
             //add email to the email store
-            emailStore.put(uuidKey, emailRequest);
+            emailStore.put(newMailId, emailRequest);
 
             //create thread.// need to optimise the function.
             switch (parentMailId) {
                 case (?pid) {
-                    createThread(uuidKey, pid); // only called if parentMailId exists
+                    createThread(newMailId, pid); // only called if parentMailId exists
                 };
                 case null {
-                    // do nothing or fallback logic
+                    Debug.print("⚠️ parentMailId is missing — cannot create thread for reply mail: " # newMailId);
                 };
             };
 
-            //add it to senders outbox
-            let senderRegistry : ?T.EmailRegistry = registry.get(senderPrincipalId);
-            switch (senderRegistry) {
-                // If registry exists, update the outbox
-                case (?senderRegistry) {
-                    let updatedOutbox = List.push(uuidKey, senderRegistry.outbox);
-                    let updatedRegistry : T.EmailRegistry = {
-                        inbox = senderRegistry.inbox;
-                        outbox = updatedOutbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(senderPrincipalId, updatedRegistry);
+            // Add to sender's outbox
+            updateRegistry(senderPrincipalId, newMailId, false);
 
-                };
-                // If registry doesn't exist, create a new one
-                case null {
-                    let newOutbox = List.push(uuidKey, List.nil());
-                    let newRegistry : T.EmailRegistry = {
-                        inbox = List.nil();
-                        outbox = newOutbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(senderPrincipalId, newRegistry);
-                };
-            };
-
-            //add it to recipeints inbox
-
-            let reciverRegistry : ?T.EmailRegistry = registry.get(recipientPrinicpalId);
-
-            switch (reciverRegistry) {
-                // If registry exists, update the outbox
-                case (?reciverRegistry) {
-                    let updatedInbox = List.push(uuidKey, reciverRegistry.inbox);
-                    let updatedRegistry : T.EmailRegistry = {
-                        inbox = updatedInbox;
-                        outbox = reciverRegistry.outbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(recipientPrinicpalId, updatedRegistry);
-
-                };
-                // If registry doesn't exist, create a new one
-                case null {
-                    let newInbox = List.push(uuidKey, List.nil());
-                    let newRegistry : T.EmailRegistry = {
-                        inbox = newInbox;
-                        outbox = List.nil();
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(recipientPrinicpalId, newRegistry);
-                };
-            };
+            // Add to recipient's inbox
+            updateRegistry(recipientPrinicpalId, newMailId, true);
 
             return #ok(emailRequest);
+        };
+
+        // Helper to update or create EmailRegistry
+        func updateRegistry(principalId : Principal, mailId : Text, isInbox : Bool) {
+            let currentRegistry = registry.get(principalId);
+            let newRegistry : T.EmailRegistry = switch (currentRegistry) {
+                case (?reg) {
+                    {
+                        inbox = if (isInbox) List.push(mailId, reg.inbox) else reg.inbox;
+                        outbox = if (not isInbox) List.push(mailId, reg.outbox) else reg.outbox;
+                        important = reg.important;
+                        openedMails = reg.openedMails;
+                    };
+                };
+                case null {
+                    {
+                        inbox = if (isInbox) List.push(mailId, List.nil()) else List.nil();
+                        outbox = if (not isInbox) List.push(mailId, List.nil()) else List.nil();
+                        important = List.nil();
+                        openedMails = List.nil();
+                    };
+                };
+            };
+            registry.put(principalId, newRegistry);
         };
 
         // Create a thread of mails
@@ -174,6 +146,7 @@ module {
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
+                            // Extract the email if it exists.
                             if (not email.isReply) {
                                 let responseEmail : T.EmailResponseDTO = {
                                     id = id;
@@ -186,16 +159,17 @@ module {
                                 };
 
                                 return ?responseEmail;
-                            } else {// if reply exist show main head mail so when opened it will show full thread.df
+                            } else {
+                                // if reply exist show main head mail so when opened it will show full thread.
                                 switch (email.parentMailId) {
                                     case (?parentMailId) {
                                         switch (emailStore.get(parentMailId)) {
                                             case (?parentMail) {
                                                 let responseEmail : T.EmailResponseDTO = {
                                                     id = parentMailId;
-                                                    from = parentMail.from;
-                                                    to = parentMail.to;
-                                                    subject = parentMail.subject;
+                                                    from = email.from;
+                                                    to = email.to;
+                                                    subject = Text.concat("RE: [Follow-up on earlier email] ", parentMail.subject);
                                                     createdOn = parentMail.createdOn;
                                                     starred = false;
                                                     readFlag = false;
@@ -203,15 +177,25 @@ module {
                                                 return ?responseEmail;
 
                                             };
-                                            case null null;
+                                            case null {
+                                                Debug.print("⚠️ Parent mail with ID " # parentMailId # " not found in store.");
+                                                return null;
+                                            };
                                         };
                                     };
-                                    case null null;
+                                    case null {
+                                        Debug.print("⚠️ Reply mail " # id # " does not have a parentMailId.");
+                                        return null;
+                                    };
                                 };
                             };
 
-                        }; // Extract the email if it exists
-                        case null null; // Skip if the email is null
+                        };
+
+                        case null {// Skip if the email is null
+                            Debug.print("⚠️ Email with ID " # id # " not found in store.");
+                            return null;
+                        }; 
                     };
                 },
             );
@@ -328,16 +312,6 @@ module {
                         starred = isStarred;
                     };
 
-                    // let hasUnreadReplies : Bool = switch (threads.get(email.id)) {
-                    //     case (?threadData) threadData.isNewMailAdded;
-                    //     case null false;
-                    // };
-
-                    // let emailResponseDTO : T.Em = {
-                    //     baseDto = emailBaseDTO;
-                    //     // hasUnreadReplies = hasUnreadReplies;
-                    // }
-
                 },
             );
         };
@@ -360,7 +334,7 @@ module {
                         inbox = savedRecord.inbox;
                         outbox = savedRecord.outbox;
                         important = updatedImportantMailsList;
-                        openedMails = List.nil();
+                        openedMails = savedRecord.openedMails;
                     };
 
                     //add updated records.
@@ -468,9 +442,11 @@ module {
 
         };
 
+        
+
         //delete all mails for the caller while deleting the profile.
         //todo: add logic to delete threads as well along with mail.
-        public func deleteMails(caller : Principal) : () {
+        public func deleteAllMails(caller : Principal) : () {
             switch (registry.get(caller)) {
                 case (?_) registry.delete(caller);
                 case null {};
@@ -499,26 +475,35 @@ module {
             return openedMails;
         };
 
-        //Multimedia file handling methods.
 
+        // ───────────────────────────────────────────────
+        // 🎞️ Multimedia File Handling
+        // ───────────────────────────────────────────────
+        // The following methods are responsible for handling
+        // multimedia file operations such as uploading files,
+        // storing them and retrieving them
+        // when needed.
+        // ───────────────────────────────────────────────
+
+        //Multimedia file handling methods.
         public func uploadFile(uploadedFile : EmailCommands.FileRequestDTO) : async Result.Result<EmailQueries.FileResponseDTO, T.FileErrors> {
 
             //generate new uuid key
-            var uuidKey : Text = await utils.generateUUID();
+            var newFileId : Text = await utils.generateUUID();
             let file : T.File = {
-                fileId = uuidKey;
+                fileId = newFileId;
                 fileName = uploadedFile.fileName;
                 contentType = uploadedFile.contentType;
                 size = uploadedFile.filedata.size();
                 filedata = uploadedFile.filedata;
 
             };
-            fileStore.put(uuidKey, file);
+            fileStore.put(newFileId, file);
 
             //validate if operation is successfull or not
-            switch (fileStore.get(uuidKey)) {
+            switch (fileStore.get(newFileId)) {
                 case (?savedResponse) #ok({
-                    fileId = uuidKey;
+                    fileId = newFileId;
                     fileName = savedResponse.fileName;
                     size = savedResponse.size;
                 });
@@ -533,7 +518,13 @@ module {
             };
         };
 
-        //data persistance
+        // ===============================
+        // 📦 Data Persistence Section
+        // ===============================
+        // This section handles accessing and updating email data from stable variables,
+        // ensuring inbox and outbox states are correctly persisted for each user.
+        // ===============================
+
         public func getStableEmailStore() : [(Text, T.Email)] {
             return Iter.toArray(emailStore.entries());
         };

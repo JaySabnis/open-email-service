@@ -53,6 +53,7 @@ module {
         #AnonymousCaller;
         #InvalidRecipientAddress;
         #ErrorSelfTransfer;
+        #MissingParentId;
     };
 
     public type File = {

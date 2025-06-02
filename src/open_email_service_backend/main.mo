@@ -55,7 +55,7 @@ actor {
   //delete profile
   public shared ({ caller }) func deleteProfile() : async Result.Result<(), ProfileType.ProfileError> {
     assert not Principal.isAnonymous(caller);
-    emailManager.deleteMails(caller);
+    emailManager.deleteAllMails(caller);
     profileService.deleteProfile(caller);
   };
 
