@@ -7,9 +7,11 @@ import Time "mo:base/Time";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 import Bool "mo:base/Bool";
+import Debug "mo:base/Debug";
 
 import T "../types/ProfileTypes";
 import ProfileCommands "../commands/ProfileCommands";
+import ProfileQueries "../queries/ProfileQueries";
 
 module {
 
@@ -97,6 +99,32 @@ module {
                 };
             };
 
+        };
+
+        public func getProfileInfoByUserAddress(userAddress : Text) : Result.Result<ProfileQueries.ProfileInfo,T.ProfileError> {
+            switch (userAddressToIdMap.get(userAddress)) {
+                case (?principalId) {
+                    switch (profiles.get(principalId)) {
+                        case (?profile) {
+                            return #ok( {
+                                id = principalId;
+                                name = profile.name;
+                                surname = profile.surname;
+                                profileImage = profile.profileImage;
+                            });
+                        };
+                        case null {
+                            Debug.print("⚠️ No profile found for principal: " # Principal.toText(principalId));
+                        };
+                    };
+                };
+                case null {
+                    Debug.print("⚠️ No principal found for address: " # userAddress);
+                };
+            };
+
+            // Return fallback empty profile
+            return #err(#NotFound);
         };
 
         //Get Profile

@@ -13,4 +13,11 @@ module ProfileQueries {
         modifiedOn : Timestamp;
     };
 
+    public type ProfileInfo={
+        id:Principal;
+        name:Text;
+        surname:Text;
+        profileImage:?Blob;
+    }
+
 };
