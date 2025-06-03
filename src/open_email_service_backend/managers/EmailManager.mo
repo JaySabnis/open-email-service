@@ -41,11 +41,11 @@ module {
                 return #err(#ErrorSelfTransfer);
             };
 
-            let parentMailId : ?Text = if (mail.isReply) {
-                mail.parentMailId;
-            } else {
+            if (mail.isReply and mail.parentMailId == null) {
                 return #err(#MissingParentId);
             };
+
+            let parentMailId : ?Text = mail.parentMailId;
 
             let emailRequest : T.Email = {
                 from = senderAddress;
@@ -66,9 +66,7 @@ module {
                 case (?pid) {
                     createThread(newMailId, pid); // only called if parentMailId exists
                 };
-                case null {
-                    Debug.print("⚠️ parentMailId is missing — cannot create thread for reply mail: " # newMailId);
-                };
+                case null {};
             };
 
             // Add to sender's outbox
@@ -192,10 +190,11 @@ module {
 
                         };
 
-                        case null {// Skip if the email is null
+                        case null {
+                            // Skip if the email is null
                             Debug.print("⚠️ Email with ID " # id # " not found in store.");
                             return null;
-                        }; 
+                        };
                     };
                 },
             );
@@ -340,9 +339,24 @@ module {
                     //add updated records.
                     registry.put(caller, updatedRegistry);
                 };
-                case null {};
+                case null return;
             };
 
+        };
+
+        public func markAsNotImportant(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case null return;
+                case (?record) {
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = List.filter<Text>(record.important, func(id : Text) : Bool { id != emailId });
+                        openedMails = record.openedMails;
+                    };
+                    registry.put(caller, updatedRegistry);
+                };
+            };
         };
 
         public func getMailById(caller : Principal, emailId : Text) : Result.Result<[EmailQueries.EmailBodyResponseDTO], T.EmailErrors> {
@@ -437,19 +451,38 @@ module {
                     //add updated records.
                     registry.put(caller, updatedRegistry);
                 };
-                case null {};
+                case null return;
             };
 
         };
 
-        
+        //delete E-mail by id.
+        public func deleteEmail(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case null return;
+                case (?record) {
+                    let remove = func(list : List.List<Text>) : List.List<Text> {
+                        List.filter<Text>(list, func(id : Text) : Bool { id != emailId });
+                    };
+
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = remove(record.inbox);
+                        outbox = remove(record.outbox);
+                        important = remove(record.important);
+                        openedMails = remove(record.openedMails);
+                    };
+
+                    registry.put(caller, updatedRegistry);
+                };
+            };
+        };
 
         //delete all mails for the caller while deleting the profile.
         //todo: add logic to delete threads as well along with mail.
         public func deleteAllMails(caller : Principal) : () {
             switch (registry.get(caller)) {
                 case (?_) registry.delete(caller);
-                case null {};
+                case null return;
             };
         };
 
@@ -474,7 +507,6 @@ module {
             };
             return openedMails;
         };
-
 
         // ───────────────────────────────────────────────
         // 🎞️ Multimedia File Handling

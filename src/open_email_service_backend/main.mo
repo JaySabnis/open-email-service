@@ -46,11 +46,16 @@ actor {
     profileService.updateProfile(caller, profile);
   };
 
-  // return result should be in main
+
   public shared ({ caller }) func getProfile() : async Result.Result<ProfileQueries.Profile, ProfileType.ProfileError> {
     assert not Principal.isAnonymous(caller);
     profileService.getProfile(caller);
   };
+
+  public query func getProfileByUserAddress(userAddress:Text) : async Result.Result<ProfileQueries.ProfileInfo,ProfileType.ProfileError> {
+    profileService.getProfileInfoByUserAddress(userAddress);
+  };
+
 
   //delete profile
   public shared ({ caller }) func deleteProfile() : async Result.Result<(), ProfileType.ProfileError> {
@@ -71,10 +76,20 @@ actor {
     await emailManager.sendEmail(senderAddress, caller, recipientPrinicpalId, mail);
   };
 
+  public shared ({ caller }) func deleteEmail(emailId:Text):async (){
+    assert not Principal.isAnonymous(caller);
+    emailManager.deleteEmail(caller,emailId);
+  };
+
   //TODO: make the functions input as a Command
   public shared ({ caller }) func markItAsImportant(emailId : Text) : async () {
     assert not Principal.isAnonymous(caller);
     emailManager.markItAsImportant(caller, emailId);
+  };
+
+  public shared ({ caller }) func markAsNotImportant(emailId : Text) : async () {
+    assert not Principal.isAnonymous(caller);
+    emailManager.markAsNotImportant(caller, emailId);
   };
 
   public shared ({ caller }) func getMailById(mailId : Text) : async Result.Result<[EmailQueries.EmailBodyResponseDTO], EmailTypes.EmailErrors> {
