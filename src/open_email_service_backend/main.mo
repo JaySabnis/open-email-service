@@ -17,11 +17,12 @@ import EmailQueries "queries/EmailQueries";
 actor {
 
   stable var stable_profile : [(Principal, ProfileType.Profile)] = [];
+  stable var stable_userAddressStore : [(Text, Principal)] = [];
   stable var stable_emailStore : [(Text, EmailTypes.Email)] = [];
   stable var stable_registries : [(Principal, EmailTypes.EmailRegistry)] = [];
   stable var stable_fileStore : [(Text, EmailTypes.File)] = [];
-  stable var stable_userAddressStore : [(Text, Principal)] = [];
-  //todo:add stable varibale fot threads.
+  stable var stable_threads:[(Text,EmailTypes.Thread)]=[];
+  
 
   //profile manager
   let profileService = ProfileManager.ProfileManager();
@@ -30,7 +31,7 @@ actor {
   let emailManager = EmailManager.EmailManager();
 
   //create profile
-  public shared ({ caller }) func createProfile(profile : ProfileCommands.CreateProfileDTO) : async  Result.Result<(), ProfileType.ProfileError> {
+  public shared ({ caller }) func createProfile(profile : ProfileCommands.CreateProfileDTO) : async Result.Result<(), ProfileType.ProfileError> {
     assert not Principal.isAnonymous(caller);
     profileService.createProfile(caller, profile);
   };
@@ -46,16 +47,14 @@ actor {
     profileService.updateProfile(caller, profile);
   };
 
-
   public shared ({ caller }) func getProfile() : async Result.Result<ProfileQueries.Profile, ProfileType.ProfileError> {
     assert not Principal.isAnonymous(caller);
     profileService.getProfile(caller);
   };
 
-  public query func getProfileByUserAddress(userAddress:Text) : async Result.Result<ProfileQueries.ProfileInfo,ProfileType.ProfileError> {
+  public query func getProfileByUserAddress(userAddress : Text) : async Result.Result<ProfileQueries.ProfileInfo, ProfileType.ProfileError> {
     profileService.getProfileInfoByUserAddress(userAddress);
   };
-
 
   //delete profile
   public shared ({ caller }) func deleteProfile() : async Result.Result<(), ProfileType.ProfileError> {
@@ -76,9 +75,9 @@ actor {
     await emailManager.sendEmail(senderAddress, caller, recipientPrinicpalId, mail);
   };
 
-  public shared ({ caller }) func deleteEmail(emailId:Text):async (){
+  public shared ({ caller }) func deleteEmail(emailId : Text) : async () {
     assert not Principal.isAnonymous(caller);
-    emailManager.deleteEmail(caller,emailId);
+    emailManager.deleteEmail(caller, emailId);
   };
 
   //TODO: make the functions input as a Command
@@ -102,12 +101,12 @@ actor {
     return emailManager.getThreadIds(headMailId);
   };
 
-  public shared ({ caller }) func fetchInboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async [EmailTypes.EmailResponseDTO] {
+  public shared ({ caller }) func fetchInboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
     await emailManager.fetchInboxMails(caller, pageNumber, pageSize);
   };
 
-  public shared ({ caller }) func fetchOutboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async [EmailTypes.EmailResponseDTO] {
+  public shared ({ caller }) func fetchOutboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
     await emailManager.fetchOutboxMails(caller, pageNumber, pageSize);
   };
@@ -126,6 +125,7 @@ actor {
     stable_emailStore := emailManager.getStableEmailStore();
     stable_registries := emailManager.getStableRegistries();
     stable_fileStore := emailManager.getStableFileStore();
+    stable_threads:=emailManager.getStableThreads();
   };
 
   system func postupgrade() {
@@ -134,6 +134,7 @@ actor {
     emailManager.setStableEmailStore(stable_emailStore);
     emailManager.setStableRegistries(stable_registries);
     emailManager.setStableFileStore(stable_fileStore);
+    emailManager.setStableThreads(stable_threads);
   };
 
 };

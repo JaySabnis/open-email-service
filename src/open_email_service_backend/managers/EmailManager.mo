@@ -131,42 +131,46 @@ module {
         };
 
         //get list of recevied mails
-        public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
+        public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
             //authenticate user when fetching the emails.
             let receviedEmailIds : List.List<Text> = switch (registry.get(caller)) {
                 case (?emailRegistry) emailRegistry.inbox;
                 case null List.nil();
             };
 
+            let totalItems:Nat=List.size(receviedEmailIds);
+
             // todo:instead of fetching all mails just fetch latest mails
-            let emails = List.mapFilter<Text, T.EmailResponseDTO>(
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
                 receviedEmailIds,
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
                             // Extract the email if it exists.
                             if (not email.isReply) {
-                                let responseEmail : T.EmailResponseDTO = {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
+                                    preview= utils.subText(email.body,0,100);
                                     subject = email.subject;
                                     createdOn = email.createdOn;
                                     starred = false;
                                     readFlag = false;
                                 };
-
                                 return ?responseEmail;
+                                
                             } else {
                                 // if reply exist show main head mail so when opened it will show full thread.
                                 switch (email.parentMailId) {
                                     case (?parentMailId) {
                                         switch (emailStore.get(parentMailId)) {
                                             case (?parentMail) {
-                                                let responseEmail : T.EmailResponseDTO = {
+                                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                                     id = parentMailId;
                                                     from = email.from;
                                                     to = email.to;
+                                                    preview= utils.subText(email.body,0,100);
                                                     subject = Text.concat("RE: [Follow-up on earlier email] ", parentMail.subject);
                                                     createdOn = parentMail.createdOn;
                                                     starred = false;
@@ -200,12 +204,12 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, false);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10),totalItems, emails, false);
 
         };
 
         //get list of sent mails
-        public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
+        public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
 
             //authenticate user when fetching the emails.
             let sentEmailIds : List.List<Text> = switch (registry.get(caller)) {
@@ -214,16 +218,19 @@ module {
                 case null List.nil();
             };
 
-            let emails = List.mapFilter<Text, T.EmailResponseDTO>(
+            let totalItems:Nat=List.size(sentEmailIds);
+
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
                 sentEmailIds,
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
                             if (not email.isReply) {
-                                let responseEmail : T.EmailResponseDTO = {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
+                                    preview= utils.subText(email.body,0,100);
                                     subject = email.subject;
                                     createdOn = email.createdOn;
                                     starred = false;
@@ -242,11 +249,11 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, true);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10),totalItems, emails, true);
 
         };
 
-        private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, emails : List.List<T.EmailResponseDTO>, isOutboxRequest : Bool) : [T.EmailResponseDTO] {
+        private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, totalItemSize : Nat, emails : List.List<EmailQueries.EmailResponseDTO>, isOutboxRequest : Bool) : EmailQueries.PaginatedEmailBodyResponseDTO {
 
             // Safely decrements pageNumber (returns 0 if pageNumber is 0)
             let adjustedPageNumber : Nat = if (Nat.greater(pageNumber, 0)) {
@@ -258,17 +265,28 @@ module {
             // Sort by createdAt (newest first)
             let sortedEmails = Array.sort(
                 allEmails,
-                func(a : T.EmailResponseDTO, b : T.EmailResponseDTO) : Order.Order {
+                func(a : EmailQueries.EmailResponseDTO, b : EmailQueries.EmailResponseDTO) : Order.Order {
                     Int.compare(b.createdOn, a.createdOn); // Descending order
                 },
             );
+
+            let totalItems = totalItemSize;
+            let totalPages = if (pageSize == 0) { 0 } else {
+                (totalItems + pageSize - 1) / pageSize;
+            };
 
             // Calculate pagination bounds
             let startIdx = adjustedPageNumber * pageSize;
 
             // Handle case where start index is beyond array bounds
             if (startIdx >= sortedEmails.size()) {
-                return [];
+                return {
+                    currentPage = pageNumber;
+                    pageSize = pageSize;
+                    totalItems = totalItems;
+                    totalPages = totalPages;
+                    data = [];
+                };
             };
 
             // Calculate safe end index (don't go beyond array bounds)
@@ -284,7 +302,7 @@ module {
             let importantMailsList : List.List<Text> = getImportantMailList(caller);
 
             //perform operations for processing flags.
-            Array.map<T.EmailResponseDTO, T.EmailResponseDTO>(
+            let processedEmails = Array.map<EmailQueries.EmailResponseDTO, EmailQueries.EmailResponseDTO>(
                 paginateEmails,
                 func(email) {
 
@@ -304,8 +322,7 @@ module {
                         case null false;
                     };
 
-                    // Return updated email with processed flags
-                    let emailBaseDTO : T.EmailResponseDTO = {
+                    {
                         email with
                         readFlag = readFlag;
                         starred = isStarred;
@@ -313,6 +330,14 @@ module {
 
                 },
             );
+
+            {
+                currentPage = pageNumber;
+                pageSize = pageSize;
+                totalItems = totalItems;
+                totalPages = totalPages;
+                data = processedEmails;
+            };
         };
 
         // mark it as important
@@ -584,6 +609,17 @@ module {
         public func setStableFileStore(files : [(Text, T.File)]) : () {
             for (entry in Iter.fromArray(files)) {
                 fileStore.put(entry.0, entry.1);
+            };
+        };
+
+
+        public func getStableThreads() : [(Text, T.Thread)] {
+            return Iter.toArray(threads.entries());
+        };
+
+        public func setStableThreads(threadsMap : [(Text, T.Thread)]) : () {
+            for (entry in Iter.fromArray(threadsMap)) {
+                threads.put(entry.0, entry.1);
             };
         };
 

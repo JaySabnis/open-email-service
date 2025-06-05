@@ -16,24 +16,9 @@ module {
         createdOn : Timestamp;
         isReply : Bool;
         parentMailId : ?Text;
-        //add parent mail id for threading
+        
     };
 
-    public type EmailResponseDTO = {
-        id : Text;
-        from : Text;
-        to : Text;
-        subject : Text;
-        createdOn : Timestamp;
-        starred : Bool;
-        readFlag : Bool;
-        //add parent mail id for threading
-    };
-
-    public type EmailThreadResponseDTO = {
-       baseDto:EmailResponseDTO;
-       hasUnreadReplies: Bool;
-    };
 
     public type Thread={
         headMailId: Text;       // Points to the first message in thread
