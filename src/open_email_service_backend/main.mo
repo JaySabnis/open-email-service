@@ -79,6 +79,16 @@ actor {
     assert not Principal.isAnonymous(caller);
     emailManager.deleteEmail(caller, emailId);
   };
+  
+  public shared({ caller }) func markAsRead(emailId : Text):async (){
+    assert not Principal.isAnonymous(caller);
+    emailManager.markAsRead(caller,emailId);
+  };
+
+  public shared({ caller }) func markAsUnread(emailId : Text):async (){
+    assert not Principal.isAnonymous(caller);
+    emailManager.markAsUnread(caller,emailId);
+  };
 
   //TODO: make the functions input as a Command
   public shared ({ caller }) func markItAsImportant(emailId : Text) : async () {

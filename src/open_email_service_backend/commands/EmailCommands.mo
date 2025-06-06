@@ -3,7 +3,7 @@ module EmailCommands {
 
     public type SendEmailDTO = {
         to : Text;
-        subject : Text;
+        subject : ?Text;
         body : Text;
         attachmentIds : [Text];
         isReply : Bool;
@@ -13,7 +13,7 @@ module EmailCommands {
     public type Email = {
         from : Text;
         to : Text;
-        subject : Text;
+        subject : ?Text;
         body : Text;
         attachmentIds : [Text];
         createdOn : Timestamp;

@@ -27,6 +27,8 @@ module {
 
         let utils = Utils.Utlis();
 
+        let noSubject : Text = "(No Subject)";
+
         private var emailStore : TrieMap.TrieMap<Text, T.Email> = TrieMap.TrieMap<Text, T.Email>(Text.equal, Text.hash);
         private var fileStore : TrieMap.TrieMap<Text, T.File> = TrieMap.TrieMap<Text, T.File>(Text.equal, Text.hash);
         private var threads : TrieMap.TrieMap<Text, T.Thread> = TrieMap.TrieMap<Text, T.Thread>(Text.equal, Text.hash);
@@ -138,7 +140,7 @@ module {
                 case null List.nil();
             };
 
-            let totalItems:Nat=List.size(receviedEmailIds);
+            let totalItems : Nat = List.size(receviedEmailIds);
 
             // todo:instead of fetching all mails just fetch latest mails
             let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
@@ -152,14 +154,14 @@ module {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
-                                    preview= utils.subText(email.body,0,100);
-                                    subject = email.subject;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
                                     createdOn = email.createdOn;
                                     starred = false;
                                     readFlag = false;
                                 };
                                 return ?responseEmail;
-                                
+
                             } else {
                                 // if reply exist show main head mail so when opened it will show full thread.
                                 switch (email.parentMailId) {
@@ -170,8 +172,8 @@ module {
                                                     id = parentMailId;
                                                     from = email.from;
                                                     to = email.to;
-                                                    preview= utils.subText(email.body,0,100);
-                                                    subject = Text.concat("RE: [Follow-up on earlier email] ", parentMail.subject);
+                                                    preview = utils.subText(email.body, 0, 100);
+                                                    subject = Text.concat("RE: [Follow-up on earlier email] ", Option.get(parentMail.subject, noSubject));
                                                     createdOn = parentMail.createdOn;
                                                     starred = false;
                                                     readFlag = false;
@@ -204,7 +206,7 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10),totalItems, emails, false);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, false);
 
         };
 
@@ -218,7 +220,7 @@ module {
                 case null List.nil();
             };
 
-            let totalItems:Nat=List.size(sentEmailIds);
+            let totalItems : Nat = List.size(sentEmailIds);
 
             let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
                 sentEmailIds,
@@ -230,8 +232,8 @@ module {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
-                                    preview= utils.subText(email.body,0,100);
-                                    subject = email.subject;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
                                     createdOn = email.createdOn;
                                     starred = false;
                                     readFlag = false;
@@ -249,7 +251,7 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10),totalItems, emails, true);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, true);
 
         };
 
@@ -387,6 +389,8 @@ module {
         public func getMailById(caller : Principal, emailId : Text) : Result.Result<[EmailQueries.EmailBodyResponseDTO], T.EmailErrors> {
             let savedEmail : ?T.Email = emailStore.get(emailId);
             switch (savedEmail) {
+                case null return #err(#NotFound);
+
                 case (?email) {
                     // Start building the full email thread response
                     var emailThreadIds : [Text] = switch (threads.get(emailId)) {
@@ -424,24 +428,20 @@ module {
                                     id = id;
                                     from = threadEmail.from;
                                     to = threadEmail.to;
-                                    subject = threadEmail.subject;
+                                    subject = Option.get(threadEmail.subject, noSubject);
                                     body = threadEmail.body;
                                     attachments = ?attachments;
                                     createdOn = threadEmail.createdOn;
                                     starred = false;
                                     readFlag = true;
                                 });
-
-                                // Mark this email as read
-                                markAsRead(caller, id);
                             };
                             case null {};
                         };
                     };
 
                     return #ok(Buffer.toArray(threadBuffer));
-                };
-                case null return #err(#NotFound);
+                };   
             };
         };
 
@@ -452,33 +452,45 @@ module {
             };
         };
 
-        //mark email as read
-        private func markAsRead(caller : Principal, emailId : Text) : () {
+        // Mark email as read
+        public func markAsRead(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case (?record) {
+                    let updatedOpened = List.push(emailId, record.openedMails);
 
-            let savedRecord : ?T.EmailRegistry = registry.get(caller);
-
-            let openedMailsList : List.List<Text> = switch (savedRecord) {
-                case (?emailRegistry) emailRegistry.openedMails;
-                case null List.nil();
-            };
-
-            let updateOpenedMailList : List.List<Text> = List.push(emailId, openedMailsList);
-
-            switch (savedRecord) {
-                case (?savedRecord) {
                     let updatedRegistry : T.EmailRegistry = {
-                        inbox = savedRecord.inbox;
-                        outbox = savedRecord.outbox;
-                        important = savedRecord.important;
-                        openedMails = updateOpenedMailList;
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = record.important;
+                        openedMails = updatedOpened;
                     };
 
-                    //add updated records.
                     registry.put(caller, updatedRegistry);
                 };
                 case null return;
             };
+        };
 
+        // Mark email as unread
+        public func markAsUnread(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case (?record) {
+                    let updatedOpened = List.filter<Text>(
+                        record.openedMails,
+                        func(id : Text) : Bool { id != emailId },
+                    );
+
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = record.important;
+                        openedMails = updatedOpened;
+                    };
+
+                    registry.put(caller, updatedRegistry);
+                };
+                case null return;
+            };
         };
 
         //delete E-mail by id.
@@ -611,7 +623,6 @@ module {
                 fileStore.put(entry.0, entry.1);
             };
         };
-
 
         public func getStableThreads() : [(Text, T.Thread)] {
             return Iter.toArray(threads.entries());

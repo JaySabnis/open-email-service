@@ -10,13 +10,12 @@ module {
     public type Email = {
         from : Text;
         to : Text;
-        subject : Text;
+        subject : ?Text;
         body : Text;
         attachmentIds : [Text];
         createdOn : Timestamp;
         isReply : Bool;
-        parentMailId : ?Text;
-        
+        parentMailId : ?Text;     
     };
 
 
