@@ -1,5 +1,4 @@
 import Blob "mo:base/Blob";
-import Time "mo:base/Time";
 import Text "mo:base/Text";
 import Principal "mo:base/Principal";
 
@@ -18,24 +17,6 @@ module{
         profileImage:?Blob;
         createdOn: Timestamp;
         modifiedOn:Timestamp;
-    };
-
-    public type CreateProfileDTO={
-        name:Text;
-        surname:Text;
-        userAddress:Text;
-        status:?Text;
-        description:?Text;
-        profileImage:?Blob;
-    };
-
-
-    public type UpdateProfileDTO={
-        name:?Text;
-        surname:?Text;
-        status:?Text;
-        description:?Text;
-        profileImage:?Blob;
     };
 
     // Main error type variant

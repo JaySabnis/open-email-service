@@ -13,11 +13,13 @@ import Order "mo:base/Order";
 import Int "mo:base/Int";
 import Nat "mo:base/Nat";
 import Buffer "mo:base/Buffer";
-import Trie "mo:base/Trie";
+import Debug "mo:base/Debug";
 
-import Utils "../../utils/helper";
+import Utils "../utils/helper";
 
-import T "EmailTypes";
+import T "../types/EmailTypes";
+import EmailCommands "../commands/EmailCommands";
+import EmailQueries "../queries/EmailQueries";
 
 module {
 
@@ -25,38 +27,30 @@ module {
 
         let utils = Utils.Utlis();
 
+        let noSubject : Text = "(No Subject)";
+
         private var emailStore : TrieMap.TrieMap<Text, T.Email> = TrieMap.TrieMap<Text, T.Email>(Text.equal, Text.hash);
         private var fileStore : TrieMap.TrieMap<Text, T.File> = TrieMap.TrieMap<Text, T.File>(Text.equal, Text.hash);
         private var threads : TrieMap.TrieMap<Text, T.Thread> = TrieMap.TrieMap<Text, T.Thread>(Text.equal, Text.hash);
         private var registry : TrieMap.TrieMap<Principal, T.EmailRegistry> = TrieMap.TrieMap<Principal, T.EmailRegistry>(Principal.equal, Principal.hash);
 
-        public func sendEmail(senderAddress : ?Text, senderPrincipalId : Principal, recipientPrinicpalIdOpt : ?Principal, mail : T.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
+        public func sendEmail(senderAddress : Text, senderPrincipalId : Principal, recipientPrinicpalId : Principal, mail : EmailCommands.SendEmailDTO) : async Result.Result<T.Email, T.EmailErrors> {
             //generate new uuid key
-            var uuidKey : Text = await utils.generateUUID();
-
-            let recipientPrinicpalId : Principal = Option.get(recipientPrinicpalIdOpt, Principal.fromText("aaaaa-aa"));
+            var newMailId : Text = await utils.generateUUID();
 
             //determine if sender or reciver is valid
-            if (senderAddress == null or recipientPrinicpalId == Principal.fromText("aaaaa-aa")) {
-                return #err(#AnonymousCaller);
-            };
-
-            if (recipientPrinicpalIdOpt == null) {
-                return #err(#InvalidRecipientAddress);
-            };
-
-            if (senderAddress == ?mail.to) {
+            if (senderAddress == mail.to) {
                 return #err(#ErrorSelfTransfer);
             };
 
-            let parentMailId : ?Text = if (mail.isReply) {
-                mail.parentMailId;
-            } else {
-                null; // todo throw error saying parent id doesnt exit for reply.
+            if (mail.isReply and mail.parentMailId == null) {
+                return #err(#MissingParentId);
             };
 
+            let parentMailId : ?Text = mail.parentMailId;
+
             let emailRequest : T.Email = {
-                from = Option.get(senderAddress, "");
+                from = senderAddress;
                 to = mail.to;
                 subject = mail.subject;
                 body = mail.body;
@@ -67,77 +61,47 @@ module {
             };
 
             //add email to the email store
-            emailStore.put(uuidKey, emailRequest);
+            emailStore.put(newMailId, emailRequest);
 
             //create thread.// need to optimise the function.
             switch (parentMailId) {
                 case (?pid) {
-                    createThread(uuidKey, pid); // only called if parentMailId exists
+                    createThread(newMailId, pid); // only called if parentMailId exists
                 };
-                case null {
-                    // do nothing or fallback logic
-                };
+                case null {};
             };
 
-            //add it to senders outbox
-            let senderRegistry : ?T.EmailRegistry = registry.get(senderPrincipalId);
-            switch (senderRegistry) {
-                // If registry exists, update the outbox
-                case (?senderRegistry) {
-                    let updatedOutbox = List.push(uuidKey, senderRegistry.outbox);
-                    let updatedRegistry : T.EmailRegistry = {
-                        inbox = senderRegistry.inbox;
-                        outbox = updatedOutbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(senderPrincipalId, updatedRegistry);
+            // Add to sender's outbox
+            updateRegistry(senderPrincipalId, newMailId, false);
 
-                };
-                // If registry doesn't exist, create a new one
-                case null {
-                    let newOutbox = List.push(uuidKey, List.nil());
-                    let newRegistry : T.EmailRegistry = {
-                        inbox = List.nil();
-                        outbox = newOutbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(senderPrincipalId, newRegistry);
-                };
-            };
-
-            //add it to recipeints inbox
-
-            let reciverRegistry : ?T.EmailRegistry = registry.get(recipientPrinicpalId);
-
-            switch (reciverRegistry) {
-                // If registry exists, update the outbox
-                case (?reciverRegistry) {
-                    let updatedInbox = List.push(uuidKey, reciverRegistry.inbox);
-                    let updatedRegistry : T.EmailRegistry = {
-                        inbox = updatedInbox;
-                        outbox = reciverRegistry.outbox;
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(recipientPrinicpalId, updatedRegistry);
-
-                };
-                // If registry doesn't exist, create a new one
-                case null {
-                    let newInbox = List.push(uuidKey, List.nil());
-                    let newRegistry : T.EmailRegistry = {
-                        inbox = newInbox;
-                        outbox = List.nil();
-                        important = List.nil();
-                        openedMails = List.nil();
-                    };
-                    registry.put(recipientPrinicpalId, newRegistry);
-                };
-            };
+            // Add to recipient's inbox
+            updateRegistry(recipientPrinicpalId, newMailId, true);
 
             return #ok(emailRequest);
+        };
+
+        // Helper to update or create EmailRegistry
+        func updateRegistry(principalId : Principal, mailId : Text, isInbox : Bool) {
+            let currentRegistry = registry.get(principalId);
+            let newRegistry : T.EmailRegistry = switch (currentRegistry) {
+                case (?reg) {
+                    {
+                        inbox = if (isInbox) List.push(mailId, reg.inbox) else reg.inbox;
+                        outbox = if (not isInbox) List.push(mailId, reg.outbox) else reg.outbox;
+                        important = reg.important;
+                        openedMails = reg.openedMails;
+                    };
+                };
+                case null {
+                    {
+                        inbox = if (isInbox) List.push(mailId, List.nil()) else List.nil();
+                        outbox = if (not isInbox) List.push(mailId, List.nil()) else List.nil();
+                        important = List.nil();
+                        openedMails = List.nil();
+                    };
+                };
+            };
+            registry.put(principalId, newRegistry);
         };
 
         // Create a thread of mails
@@ -169,41 +133,47 @@ module {
         };
 
         //get list of recevied mails
-        public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
+        public func fetchInboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
             //authenticate user when fetching the emails.
             let receviedEmailIds : List.List<Text> = switch (registry.get(caller)) {
                 case (?emailRegistry) emailRegistry.inbox;
                 case null List.nil();
             };
 
+            let totalItems : Nat = List.size(receviedEmailIds);
+
             // todo:instead of fetching all mails just fetch latest mails
-            let emails = List.mapFilter<Text, T.EmailResponseDTO>(
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
                 receviedEmailIds,
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
+                            // Extract the email if it exists.
                             if (not email.isReply) {
-                                let responseEmail : T.EmailResponseDTO = {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
-                                    subject = email.subject;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
                                     createdOn = email.createdOn;
                                     starred = false;
                                     readFlag = false;
                                 };
-
                                 return ?responseEmail;
-                            } else {// if reply exist show main head mail so when opened it will show full thread.df
+
+                            } else {
+                                // if reply exist show main head mail so when opened it will show full thread.
                                 switch (email.parentMailId) {
                                     case (?parentMailId) {
                                         switch (emailStore.get(parentMailId)) {
                                             case (?parentMail) {
-                                                let responseEmail : T.EmailResponseDTO = {
+                                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                                     id = parentMailId;
-                                                    from = parentMail.from;
-                                                    to = parentMail.to;
-                                                    subject = parentMail.subject;
+                                                    from = email.from;
+                                                    to = email.to;
+                                                    preview = utils.subText(email.body, 0, 100);
+                                                    subject = Text.concat("RE: [Follow-up on earlier email] ", Option.get(parentMail.subject, noSubject));
                                                     createdOn = parentMail.createdOn;
                                                     starred = false;
                                                     readFlag = false;
@@ -211,26 +181,37 @@ module {
                                                 return ?responseEmail;
 
                                             };
-                                            case null null;
+                                            case null {
+                                                Debug.print("⚠️ Parent mail with ID " # parentMailId # " not found in store.");
+                                                return null;
+                                            };
                                         };
                                     };
-                                    case null null;
+                                    case null {
+                                        Debug.print("⚠️ Reply mail " # id # " does not have a parentMailId.");
+                                        return null;
+                                    };
                                 };
                             };
 
-                        }; // Extract the email if it exists
-                        case null null; // Skip if the email is null
+                        };
+
+                        case null {
+                            // Skip if the email is null
+                            Debug.print("⚠️ Email with ID " # id # " not found in store.");
+                            return null;
+                        };
                     };
                 },
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, false);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, false);
 
         };
 
         //get list of sent mails
-        public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async [T.EmailResponseDTO] {
+        public func fetchOutboxMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
 
             //authenticate user when fetching the emails.
             let sentEmailIds : List.List<Text> = switch (registry.get(caller)) {
@@ -239,17 +220,20 @@ module {
                 case null List.nil();
             };
 
-            let emails = List.mapFilter<Text, T.EmailResponseDTO>(
+            let totalItems : Nat = List.size(sentEmailIds);
+
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
                 sentEmailIds,
                 func(id) {
                     switch (emailStore.get(id)) {
                         case (?email) {
                             if (not email.isReply) {
-                                let responseEmail : T.EmailResponseDTO = {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
                                     id = id;
                                     from = email.from;
                                     to = email.to;
-                                    subject = email.subject;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
                                     createdOn = email.createdOn;
                                     starred = false;
                                     readFlag = false;
@@ -267,11 +251,11 @@ module {
             );
 
             // page number is optional, default pagination(pageNumber=1, pageSize=10)
-            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), emails, true);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, true);
 
         };
 
-        private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, emails : List.List<T.EmailResponseDTO>, isOutboxRequest : Bool) : [T.EmailResponseDTO] {
+        private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, totalItemSize : Nat, emails : List.List<EmailQueries.EmailResponseDTO>, isOutboxRequest : Bool) : EmailQueries.PaginatedEmailBodyResponseDTO {
 
             // Safely decrements pageNumber (returns 0 if pageNumber is 0)
             let adjustedPageNumber : Nat = if (Nat.greater(pageNumber, 0)) {
@@ -283,17 +267,28 @@ module {
             // Sort by createdAt (newest first)
             let sortedEmails = Array.sort(
                 allEmails,
-                func(a : T.EmailResponseDTO, b : T.EmailResponseDTO) : Order.Order {
+                func(a : EmailQueries.EmailResponseDTO, b : EmailQueries.EmailResponseDTO) : Order.Order {
                     Int.compare(b.createdOn, a.createdOn); // Descending order
                 },
             );
+
+            let totalItems = totalItemSize;
+            let totalPages = if (pageSize == 0) { 0 } else {
+                (totalItems + pageSize - 1) / pageSize;
+            };
 
             // Calculate pagination bounds
             let startIdx = adjustedPageNumber * pageSize;
 
             // Handle case where start index is beyond array bounds
             if (startIdx >= sortedEmails.size()) {
-                return [];
+                return {
+                    currentPage = pageNumber;
+                    pageSize = pageSize;
+                    totalItems = totalItems;
+                    totalPages = totalPages;
+                    data = [];
+                };
             };
 
             // Calculate safe end index (don't go beyond array bounds)
@@ -309,7 +304,7 @@ module {
             let importantMailsList : List.List<Text> = getImportantMailList(caller);
 
             //perform operations for processing flags.
-            Array.map<T.EmailResponseDTO, T.EmailResponseDTO>(
+            let processedEmails = Array.map<EmailQueries.EmailResponseDTO, EmailQueries.EmailResponseDTO>(
                 paginateEmails,
                 func(email) {
 
@@ -329,25 +324,22 @@ module {
                         case null false;
                     };
 
-                    // Return updated email with processed flags
-                    let emailBaseDTO : T.EmailResponseDTO = {
+                    {
                         email with
                         readFlag = readFlag;
                         starred = isStarred;
                     };
 
-                    // let hasUnreadReplies : Bool = switch (threads.get(email.id)) {
-                    //     case (?threadData) threadData.isNewMailAdded;
-                    //     case null false;
-                    // };
-
-                    // let emailResponseDTO : T.Em = {
-                    //     baseDto = emailBaseDTO;
-                    //     // hasUnreadReplies = hasUnreadReplies;
-                    // }
-
                 },
             );
+
+            {
+                currentPage = pageNumber;
+                pageSize = pageSize;
+                totalItems = totalItems;
+                totalPages = totalPages;
+                data = processedEmails;
+            };
         };
 
         // mark it as important
@@ -368,20 +360,37 @@ module {
                         inbox = savedRecord.inbox;
                         outbox = savedRecord.outbox;
                         important = updatedImportantMailsList;
-                        openedMails = List.nil();
+                        openedMails = savedRecord.openedMails;
                     };
 
                     //add updated records.
                     registry.put(caller, updatedRegistry);
                 };
-                case null {};
+                case null return;
             };
 
         };
 
-        public func getMailById(caller : Principal, emailId : Text) : Result.Result<[T.EmailBodyResponseDTO], T.EmailErrors> {
+        public func markAsNotImportant(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case null return;
+                case (?record) {
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = List.filter<Text>(record.important, func(id : Text) : Bool { id != emailId });
+                        openedMails = record.openedMails;
+                    };
+                    registry.put(caller, updatedRegistry);
+                };
+            };
+        };
+
+        public func getMailById(caller : Principal, emailId : Text) : Result.Result<[EmailQueries.EmailBodyResponseDTO], T.EmailErrors> {
             let savedEmail : ?T.Email = emailStore.get(emailId);
             switch (savedEmail) {
+                case null return #err(#NotFound);
+
                 case (?email) {
                     // Start building the full email thread response
                     var emailThreadIds : [Text] = switch (threads.get(emailId)) {
@@ -394,12 +403,12 @@ module {
                         emailThreadIds := Array.append([emailId], emailThreadIds);
                     };
 
-                    let threadBuffer = Buffer.Buffer<T.EmailBodyResponseDTO>(emailThreadIds.size());
+                    let threadBuffer = Buffer.Buffer<EmailQueries.EmailBodyResponseDTO>(emailThreadIds.size());
 
                     for (id in emailThreadIds.vals()) {
                         switch (emailStore.get(id)) {
                             case (?threadEmail) {
-                                let attachmentsBuffer = Buffer.Buffer<T.FileResponseDTO>(threadEmail.attachmentIds.size());
+                                let attachmentsBuffer = Buffer.Buffer<EmailQueries.FileResponseDTO>(threadEmail.attachmentIds.size());
                                 for (fileId in threadEmail.attachmentIds.vals()) {
                                     switch (fileStore.get(fileId)) {
                                         case (?file) {
@@ -413,30 +422,26 @@ module {
                                     };
                                 };
 
-                                let attachments : [T.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
+                                let attachments : [EmailQueries.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
 
                                 threadBuffer.add({
                                     id = id;
                                     from = threadEmail.from;
                                     to = threadEmail.to;
-                                    subject = threadEmail.subject;
+                                    subject = Option.get(threadEmail.subject, noSubject);
                                     body = threadEmail.body;
                                     attachments = ?attachments;
                                     createdOn = threadEmail.createdOn;
                                     starred = false;
                                     readFlag = true;
                                 });
-
-                                // Mark this email as read
-                                markAsRead(caller, id);
                             };
                             case null {};
                         };
                     };
 
                     return #ok(Buffer.toArray(threadBuffer));
-                };
-                case null return #err(#NotFound);
+                };   
             };
         };
 
@@ -447,41 +452,74 @@ module {
             };
         };
 
-        //mark email as read
-        private func markAsRead(caller : Principal, emailId : Text) : () {
+        // Mark email as read
+        public func markAsRead(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case (?record) {
+                    let updatedOpened = List.push(emailId, record.openedMails);
 
-            let savedRecord : ?T.EmailRegistry = registry.get(caller);
-
-            let openedMailsList : List.List<Text> = switch (savedRecord) {
-                case (?emailRegistry) emailRegistry.openedMails;
-                case null List.nil();
-            };
-
-            let updateOpenedMailList : List.List<Text> = List.push(emailId, openedMailsList);
-
-            switch (savedRecord) {
-                case (?savedRecord) {
                     let updatedRegistry : T.EmailRegistry = {
-                        inbox = savedRecord.inbox;
-                        outbox = savedRecord.outbox;
-                        important = savedRecord.important;
-                        openedMails = updateOpenedMailList;
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = record.important;
+                        openedMails = updatedOpened;
                     };
 
-                    //add updated records.
                     registry.put(caller, updatedRegistry);
                 };
-                case null {};
+                case null return;
             };
+        };
 
+        // Mark email as unread
+        public func markAsUnread(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case (?record) {
+                    let updatedOpened = List.filter<Text>(
+                        record.openedMails,
+                        func(id : Text) : Bool { id != emailId },
+                    );
+
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = record.inbox;
+                        outbox = record.outbox;
+                        important = record.important;
+                        openedMails = updatedOpened;
+                    };
+
+                    registry.put(caller, updatedRegistry);
+                };
+                case null return;
+            };
+        };
+
+        //delete E-mail by id.
+        public func deleteEmail(caller : Principal, emailId : Text) : () {
+            switch (registry.get(caller)) {
+                case null return;
+                case (?record) {
+                    let remove = func(list : List.List<Text>) : List.List<Text> {
+                        List.filter<Text>(list, func(id : Text) : Bool { id != emailId });
+                    };
+
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = remove(record.inbox);
+                        outbox = remove(record.outbox);
+                        important = remove(record.important);
+                        openedMails = remove(record.openedMails);
+                    };
+
+                    registry.put(caller, updatedRegistry);
+                };
+            };
         };
 
         //delete all mails for the caller while deleting the profile.
         //todo: add logic to delete threads as well along with mail.
-        public func deleteMails(caller : Principal) : () {
+        public func deleteAllMails(caller : Principal) : () {
             switch (registry.get(caller)) {
                 case (?_) registry.delete(caller);
-                case null {};
+                case null return;
             };
         };
 
@@ -507,26 +545,34 @@ module {
             return openedMails;
         };
 
-        //Multimedia file handling methods.
+        // ───────────────────────────────────────────────
+        // 🎞️ Multimedia File Handling
+        // ───────────────────────────────────────────────
+        // The following methods are responsible for handling
+        // multimedia file operations such as uploading files,
+        // storing them and retrieving them
+        // when needed.
+        // ───────────────────────────────────────────────
 
-        public func uploadFile(uploadedFile : T.FileRequestDTO) : async Result.Result<T.FileResponseDTO, T.FileErrors> {
+        //Multimedia file handling methods.
+        public func uploadFile(uploadedFile : EmailCommands.FileRequestDTO) : async Result.Result<EmailQueries.FileResponseDTO, T.FileErrors> {
 
             //generate new uuid key
-            var uuidKey : Text = await utils.generateUUID();
+            var newFileId : Text = await utils.generateUUID();
             let file : T.File = {
-                fileId = uuidKey;
+                fileId = newFileId;
                 fileName = uploadedFile.fileName;
                 contentType = uploadedFile.contentType;
                 size = uploadedFile.filedata.size();
                 filedata = uploadedFile.filedata;
 
             };
-            fileStore.put(uuidKey, file);
+            fileStore.put(newFileId, file);
 
             //validate if operation is successfull or not
-            switch (fileStore.get(uuidKey)) {
+            switch (fileStore.get(newFileId)) {
                 case (?savedResponse) #ok({
-                    fileId = uuidKey;
+                    fileId = newFileId;
                     fileName = savedResponse.fileName;
                     size = savedResponse.size;
                 });
@@ -541,7 +587,13 @@ module {
             };
         };
 
-        //data persistance
+        // ===============================
+        // 📦 Data Persistence Section
+        // ===============================
+        // This section handles accessing and updating email data from stable variables,
+        // ensuring inbox and outbox states are correctly persisted for each user.
+        // ===============================
+
         public func getStableEmailStore() : [(Text, T.Email)] {
             return Iter.toArray(emailStore.entries());
         };
@@ -569,6 +621,16 @@ module {
         public func setStableFileStore(files : [(Text, T.File)]) : () {
             for (entry in Iter.fromArray(files)) {
                 fileStore.put(entry.0, entry.1);
+            };
+        };
+
+        public func getStableThreads() : [(Text, T.Thread)] {
+            return Iter.toArray(threads.entries());
+        };
+
+        public func setStableThreads(threadsMap : [(Text, T.Thread)]) : () {
+            for (entry in Iter.fromArray(threadsMap)) {
+                threads.put(entry.0, entry.1);
             };
         };
 
