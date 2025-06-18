@@ -1,25 +1,18 @@
 <script>
-  import { authSignedInStore } from "$lib/derived/auth.derived";
-  import Sidebar from "$lib/components/sidebar.svelte";
-  import { goto } from "$app/navigation";
-  import Navbar from "$lib/components/navbar.svelte";
+  import Sidebar from "$lib/components/NewSidebar.svelte";
   import { onMount } from "svelte";
-  import { loadUserProfile } from "$lib/store/user";
   import { theme } from "$lib/store/theme";
   import { colors } from "$lib/store/colors";
-  import { get } from 'svelte/store';
+  import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
+  import { authStore } from "$lib/store/auth-store";
   import "../app.css";
-
-  let isSidebarOpen = false;
-  let isAuthenticated = false;
-  let isMobile = false;
-
-  $: isAuthenticated = $authSignedInStore;
+  import { get } from 'svelte/store';
+   import { showWriteMail } from '$lib/store/ui';
 
   let currentTheme;
   let currentColors;
-
-
+  let authChecked = false;
 
   const unsubscribeTheme = theme.subscribe(value => {
     currentTheme = value;
@@ -33,95 +26,40 @@
       }
     }
   });
-  
-  onMount(() => {
-    if (!isAuthenticated) {
-      goto("/");
-    }
 
-    if (window.innerWidth < 768) {
-      isMobile = true;
+  function closeWriteMail() {
+    showWriteMail = false;
+  }
+
+  onMount(async () => {
+    if (!browser) return;
+    
+    try {
+      const identity = await authStore.sync();
+      if (!identity) await goto('/login');
+      authChecked = true;
+    } catch (err) {
+      console.error("Auth check failed:", err);
+      await goto('/login');
     }
-    window.addEventListener("resize", () => {
-      isMobile = window.innerWidth < 768;
-    });
-    loadUserProfile();
   });
-
-  const toggleSidebar = () => {
-    isSidebarOpen = !isSidebarOpen;
-  };
 </script>
 
 
-<div class="flex min-h-screen" style="
-          background-color: {currentColors.bgLightColor};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        ">
-  {#if isAuthenticated}
-    <Sidebar {isSidebarOpen} {toggleSidebar} />
-  {/if}
-
-  <div class=" flex flex-col w-full" style="
-          background-color: {currentColors.bgLightColor};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        ">
-    {#if isAuthenticated}
-      <Navbar {currentColors} />
-    {/if}
-
-    {#if isAuthenticated}
-      <div
-        class="w-full border-gray-300 p-2 flex items-center"
-        style="
-          background-color: {currentColors.surface};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        "
-      >
-       <button
-          class="p-2 rounded-md"
-          style="background-color: {currentColors.bgLightColor}; color: {currentColors.color};"
-          aria-label="Toggle Sidebar"
-          on:click={toggleSidebar}
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            viewBox="0 0 24 24"
-          >
-            {#if isSidebarOpen}
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            {:else}
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            {/if}
-          </svg>
-        </button>
-        <span class="ml-2 text-sm">
-          Menu
-        </span>
-      </div>
-    {/if}
-
-    <main class="">
-      <slot></slot>
-    </main>
+{#if authChecked && $authStore?.identity}
+  <div class="flex" style="background-color: {currentColors?.bgLightColor}; color: {currentColors?.color};">
+    <Sidebar  />
+    <div class="flex-1 ml-64">
+      <slot 
+        showWriteMail={showWriteMail} 
+        closeWriteMail={closeWriteMail} 
+      />
+    </div>
   </div>
-</div>
+{/if}
 
 <style>
-  @reference "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
 </style>
