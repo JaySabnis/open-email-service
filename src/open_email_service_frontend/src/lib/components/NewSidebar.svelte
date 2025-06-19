@@ -4,7 +4,8 @@
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/store/auth-store';
   import { toggleWriteMail } from '$lib/store/ui';
-
+ import { signOut } from "$lib/services/auth.services";
+ 
   const dispatch = createEventDispatcher();
 
   let user = {
@@ -21,7 +22,7 @@
   }
 
   function logout() {
-    authStore.logout(); 
+    signOut();
     goto('/login');
   }
 

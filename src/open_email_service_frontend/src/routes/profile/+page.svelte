@@ -8,14 +8,15 @@
   import { theme } from "$lib/store/theme";
   import { colors } from "$lib/store/colors";
   import { get } from 'svelte/store';
-
+    import { goto } from "$app/navigation"; 
+    
   let name = '';
   let surname = '';
   let userAddress = '';
   let status = '';
   let description = '';
   let profile = null;
-  let loading = true;
+  let loading;
   let isEditMode = false;
   let addressValid = null; 
   let addressError = '';
@@ -41,9 +42,6 @@
     }
   });
 
-  if (!authSignedInStore) {
-    signOut();
-  }
 
  function opt(value) {
   if (value === undefined || value === null || value === '') {
@@ -87,8 +85,7 @@
         if (hasChanged) {
           console.log("Updating profile with:", updateData);
           await profileStore.updateProfile(updateData);
-          const forceRefresh = true;
-          await loadUserProfile(forceRefresh);
+          getUserProfile();
         } else {
           console.log("No changes detected");
         }
@@ -103,7 +100,7 @@
 
         console.log("Creating profile with:", createData);
         await profileStore.createProfile(createData);
-        await loadUserProfile(true);
+        await goto('/');
       }
       showSuccess = true;
       window.dispatchEvent(new CustomEvent('profileUpdated'));
@@ -145,44 +142,36 @@ function handleImageUpload(event) {
 }
 
 
-
-    function updateProfileFromStorage() {
-    loading = true;
-    try {
-      const profileData = JSON.parse(localStorage.getItem('userProfileCache'));
-      if (profileData) {
-      profile = profileData.data || null;
-      name = profile.name || '';
-      surname = profile.surname || '';
-      userAddress = profile.userAddress || '';
-      status = profile.status || '';
-      description = profile.description || '';
-      profileImageUrl= profile.profileImage || ''
-      
+  function getUserProfile() {
+  return profileStore.getProfile()
+    .then((res) => {
+      profile = res?.ok || null;
+      console.log("Profile fetched:", profile);
+      if (profile) {
+        name = profile.name || '';
+        surname = profile.surname || '';
+        userAddress = profile.userAddress || '';
+        status = profile.status || '';
+        description = profile.description || '';
+        profileImageUrl = profile.profileImage
+          ? URL.createObjectURL(new Blob(profile.profileImage))
+          : '';
       }
-    } catch (error) {
-      console.error('Error reading profile from localStorage:', error);
-    }
+    })
+    .catch((err) => {
+      console.error("Background profile fetch failed:", err);
+    });
+}
+
+
+ onMount(() => {
+  (async () => {
+    loading = true;
+    console.log("Profile page mounted");
+    await getUserProfile();  
     loading = false;
-  }
-
-  onMount(() => {
-    updateProfileFromStorage();
-    window.addEventListener('profileUpdated', updateProfileFromStorage);
-    window.addEventListener('storage', handleStorageEvent);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener('profileUpdated', updateProfileFromStorage);
-    window.removeEventListener('storage', handleStorageEvent);
-    unsubscribeTheme();
-  });
-
-  function handleStorageEvent(event) {
-    if (event.key === 'userProfileCache') {
-      updateProfileFromStorage();
-    }
-  }
+  })();
+});
 
 
   function onAddressInput(event) {

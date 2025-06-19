@@ -2,6 +2,7 @@
     import { signIn } from "$lib/services/auth.services"; 
     import { goto } from "$app/navigation"; 
     import { browser } from "$app/environment"; 
+    import { profileStore } from "$lib/store/profile-store";
   
     async function handleLogin() {
       // console.log("Logging in...");
@@ -9,7 +10,19 @@
         domain: `http://localhost:4943/?canisterId=qhbym-qaaaa-aaaaa-aaafq-cai`,
       };
       await signIn(params);
-      goto(`/dashboard`); 
+      let profile;
+       profileStore.getProfile().then(async (res) => {
+                profile = res.ok || null;
+                console.log("Profile fetched:", profile);
+            }).catch(err => {
+                console.error("Background profile fetch failed:", err);
+            });
+
+      if (profile) {
+        await goto(`/`);
+      }
+
+      await goto(`/profile`); 
     }
   </script>
   
