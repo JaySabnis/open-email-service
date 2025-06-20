@@ -22,7 +22,7 @@
   }
 </script>
 
-<main class="min-h-screen relative flex items-center justify-center bg-gray-100">
+<main class="min-h-screen relative flex items-center justify-center bg-white">
 
   <div class="hidden lg:block absolute inset-0">
     <!-- <img src="https://miro.medium.com/v2/resize:fit:1400/1*guz0NRDfCNOU5nnfsiEsFw.jpeg" alt="Login Image" class="w-full h-full" /> -->

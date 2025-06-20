@@ -24,7 +24,7 @@
   </div>
 
   {#if selectedMessage}
-    <div class="w-[70%] border-l bg-white">
+    <div class="w-[70%] border-l border-gray-200 bg-white">
       <MessageDetails message={selectedMessage} on:close={handleClose} />
     </div>
   {/if}

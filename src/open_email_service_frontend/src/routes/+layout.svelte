@@ -89,9 +89,9 @@
 </script>
 
 {#if !initialized}
-  <div class="min-h-screen bg-gray-50"></div>
+  <div class="min-h-screen"></div>
 {:else if showLogin}
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+  <div class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md space-y-8">
       <LoginPage />
     </div>

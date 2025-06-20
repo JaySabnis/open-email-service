@@ -20,6 +20,8 @@
   let currentColors;
   let isSentPage = false;
   let error = null;
+  let filteredMails = [];
+
 
  function selectMessage(msg) {
     if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
@@ -74,46 +76,56 @@
       getMails();
     }
   }
+
+  $: filteredMails = searchTerm.trim()
+  ? mails.filter(m => (m.subject || '').toLowerCase().includes(searchTerm.trim().toLowerCase()))
+  : mails;
+
+  $: if (searchTerm) {
+  pageNumber = 1;
+  }
+
+
 </script>
 
 <div class="space-y-4 p-6 overflow-y-auto h-screen bg-white">
-  <h2 class="text-xl font-bold mb-4">
+  <h2 class="text-2xl font-semibold mb-6 text-gray-800">
     {isSentPage ? "Sent Mails" : "Inbox Mails"}
   </h2>
-  
+
   <input
     type="text"
     placeholder="Search by subject..."
     bind:value={searchTerm}
-    class="w-full mb-4 p-2 border rounded"
+    class="w-full mb-6 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
   />
-  
+
   {#if error}
     <div class="text-red-500 text-center p-4">
       Error loading messages: {error.message}
     </div>
-  {:else if mails.length > 0}
-    <div class="w-full p-1">
-      {#each mails as msg, i}
+  {:else if filteredMails.length > 0}
+    <div class="space-y-4">
+      {#each filteredMails as msg, i}
         <div
-          class="transition-all duration-200 border shadow-sm px-4 py-3 cursor-pointer flex justify-between items-start hover:opacity-95"
+          class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-5 flex justify-between items-center group"
           class:bg-blue-50={selectedMessage?.id === msg.id}
           on:click={() => selectMessage(msg)}
         >
-          <div class="flex-1">
-            <p class="font-semibold text-base truncate">
+          <div class="flex-1 min-w-0">
+            <p class="text-base font-medium text-gray-800 truncate group-hover:text-blue-600">
               {isSentPage ? (msg?.to || `Recipient ${i + 1}`) : (msg?.from || `Sender ${i + 1}`)}
             </p>
-            <p class="text-sm truncate">
+            <p class="text-sm text-gray-600 truncate">
               {msg?.subject || 'No Subject'}
             </p>
           </div>
-          <span class="text-xs whitespace-nowrap pl-4">
+          <span class="text-sm text-gray-500 pl-6 shrink-0 whitespace-nowrap">
             {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleString()}
           </span>
         </div>
       {/each}
-      
+
       <Pagination
         currentPage={pageNumber}
         {hasNextPage}
