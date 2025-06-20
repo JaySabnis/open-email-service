@@ -115,6 +115,12 @@
   }
 </style>
 
+
+<svelte:head>
+  <title>Send Mails</title>
+</svelte:head>
+
+
 <div class="max-w-xl mx-auto p-6 mt-10 rounded-lg shadow-lg" style="background-color: {currentColors.cardBg};">
   <h1 class="text-2xl font-semibold mb-6 text-center" style="color: {currentColors.headingColor};">Send Email</h1>
 

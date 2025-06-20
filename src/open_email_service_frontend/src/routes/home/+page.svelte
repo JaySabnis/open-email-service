@@ -4,6 +4,12 @@
 
 </script>
 
+
+<svelte:head>
+  <title>Inbox</title>
+</svelte:head>
+
+
 <div>
     <Home/>
 </div>

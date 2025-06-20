@@ -5,6 +5,11 @@
   import { showWriteMail, closeWriteMail } from '$lib/store/ui';
 </script>
 
+
+<svelte:head>
+  <title>Outgoing</title>
+</svelte:head>
+
 <div class="w-full">
   <MessageComponent />
 

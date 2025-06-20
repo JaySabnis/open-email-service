@@ -185,6 +185,12 @@
 </script>
 
 
+
+<svelte:head>
+  <title>Profile</title>
+</svelte:head>
+
+
 {#if showSuccess}
   <div class="text-center py-8">
     <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-green-100 text-green-500">
