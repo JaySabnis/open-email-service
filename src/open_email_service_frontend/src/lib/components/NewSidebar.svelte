@@ -1,54 +1,47 @@
-<!-- components/NewSidebar.svelte -->
 <script>
-  import { createEventDispatcher } from "svelte";
   import { goto } from '$app/navigation';
-  import { authStore } from '$lib/store/auth-store';
   import { toggleWriteMail } from '$lib/store/ui';
- import { signOut } from "$lib/services/auth.services";
- 
-  const dispatch = createEventDispatcher();
+  import { signOut } from "$lib/services/auth.services";
+  import { onMount } from 'svelte';
+  export let profile;
 
-  let user = {
-    profileImage: "https://via.placeholder.com/40",
-    username: "Sahana Joshi",
-    userAddress: "sahana@example.com"
-  };
-
-  let currentTheme = "light";
+  let currentTheme;
 
   function setTheme(theme) {
     currentTheme = theme;
-    // Add your logic to update the actual theme (e.g., document.body.classList)
   }
 
-  function logout() {
-    signOut();
-    goto('/login');
+  async function logout() {
+    try {
+      await signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   }
 
-   function handleWriteClick() {
+  function handleWriteClick() {
     toggleWriteMail();
   }
+
+  onMount(() => {
+    // console.log("Sidebar mounted",profile);
+  });
 </script>
-
-
 
 <aside class="w-64 h-screen bg-gray-800 text-white fixed top-0 left-0 shadow-lg flex flex-col justify-between">
   <div>
-    <div class="p-4 flex items-center space-x-4 border-b border-gray-700">
-      <img
-        src={user.profileImage}
-        alt="Profile"
-        class="w-10 h-10 rounded-full object-cover border border-gray-500"
-      />
-      <div>
-        <div class="text-sm font-semibold">{user.username}</div>
-        <div class="text-xs text-gray-400 truncate">{user.userAddress}</div>
+    <a href="/profile" class="block hover:bg-gray-700 p-2 rounded">
+      <div class="p-4 flex items-center space-x-4 border-b border-gray-700">
+        <img src={URL.createObjectURL(new Blob(profile?.profileImage))} alt="Profile" class="w-12 h-12 rounded-full" />
+        <div>
+          <div class="text-sm font-semibold">{profile?.name || "User"}</div>
+          <div class="text-xs text-gray-400 truncate">{profile?.userAddress || "user@example.com"}</div>
+        </div>
       </div>
-    </div>
+    </a>
 
     <nav class="p-4 space-y-2">
-      <!-- New Write with + plus icon button -->
       <button
         class="flex items-center gap-2 w-full hover:bg-gray-700 p-2 rounded text-left focus:outline-none"
         on:click={handleWriteClick}
@@ -57,9 +50,9 @@
         <span class="text-lg font-bold">+</span> Write
       </button>
 
-      <a href="/" class="block hover:bg-gray-700 p-2 rounded">Home</a>
+      <a href="/home" class="block hover:bg-gray-700 p-2 rounded">Home</a>
       <a href="/send" class="block hover:bg-gray-700 p-2 rounded">Send</a>
-      <a href="/" class="block hover:bg-gray-700 p-2 rounded">Settings</a>
+      <a href="/sent" class="block hover:bg-gray-700 p-2 rounded">Sent</a>
     </nav>
   </div>
 

@@ -2,59 +2,72 @@
   import { onMount } from 'svelte';
   import { authStore } from '$lib/store/auth-store';
   import { profileStore } from '$lib/store/profile-store';
+  import { signOut } from '$lib/services/auth.services';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import Sidebar from '$lib/components/NewSidebar.svelte';
   import Loader from '$lib/components/loader.svelte';
-  import "../app.css";
+  import LoginPage from '$lib/components/loginPage.svelte';
+  import '../app.css';
 
   let identity = null;
   let profile = null;
   let showSidebar = false;
   let loading = true;
+  let showLogin = false;
+  let authInitialized = false;
 
   async function fetchAndSetProfile() {
     try {
+      if (!identity || !identity.getPrincipal) {
+        console.error("Invalid identity state");
+        return;
+      }
+
       const res = await profileStore.getProfile();
-      profile = res.ok || null;
+      profile = res?.ok || null;
       showSidebar = !!profile;
+      return profile; 
     } catch (err) {
       console.error("Profile fetch failed:", err);
       profile = null;
       showSidebar = false;
+      return null;
     }
   }
 
   onMount(async () => {
+    // await signOut()
     if (!browser) return;
 
-    const currentPath = window.location.pathname;
-    identity = await authStore.sync();
+    try {
+      identity = await authStore.sync();
+      authInitialized = true;
+      
+      if (!identity) {
+        showLogin = true;
+        loading = false;
+        return;
+      }
 
-    if (!identity && currentPath !== '/login') {
-      goto('/login');
-      return;
-    }
+      const profileExists = await fetchAndSetProfile();
 
-    if (identity) {
-      await fetchAndSetProfile();
-
-      if (currentPath === '/login') {
-        if (profile) {
-          goto('/');
-        } else {
-          goto('/profile');
+      const currentPath = window.location.pathname;
+      
+      if (profileExists) {
+        if (currentPath === '/' || currentPath === '/profile') {
+          await goto('/home', { replaceState: true });
         }
-        return;
+      } else {
+        if (currentPath !== '/profile') {
+          await goto('/profile', { replaceState: true });
+        }
       }
-
-      if (!profile && currentPath !== '/profile') {
-        goto('/profile');
-        return;
-      }
+    } catch (err) {
+      console.error("Initialization error:", err);
+    } finally {
+      loading = false;
     }
-
-    loading = false;
 
     const listener = async () => {
       loading = true;
@@ -69,10 +82,16 @@
 
 {#if loading}
   <Loader message="Loading your experience..." />
+{:else if showLogin}
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div class="w-full max-w-md space-y-8">
+      <LoginPage />
+    </div>
+  </div>
 {:else}
   <div class="flex">
     {#if showSidebar}
-      <Sidebar />
+      <Sidebar {profile} />
     {/if}
     <div class="flex-1 {showSidebar ? 'ml-64' : ''}">
       <slot />

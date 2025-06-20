@@ -1,10 +1,11 @@
 <script>
   import MessageComponent from "$lib/components/MessageComponent.svelte";
+  import NewSidebar from "$lib/components/NewSidebar.svelte";
   import WriteMail from "$lib/components/WriteMail.svelte";
   import { showWriteMail, closeWriteMail } from '$lib/store/ui';
 </script>
 
-<div class="w-full relative">
+<div class="w-full">
   <MessageComponent />
 
   {#if $showWriteMail}

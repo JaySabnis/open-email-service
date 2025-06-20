@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { profileStore } from "$lib/store/profile-store";
+// import { pageLoading } from '$lib/store/loading';
 
 const EXPIRY_TIME_MS = 1000 * 60 * 60 * 24 * 2; 
 const CACHE_KEY = 'userProfileCache';
@@ -12,11 +13,14 @@ export const userProfile = writable(null);
 
 export async function loadUserProfile(forceRefresh = false) {
     try {
+        // pageLoading.set(true);
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
 
         if (!forceRefresh && cached?.data && !isStale(cached.timestamp)) {
             userProfile.set(cached.data);
+            // pageLoading.set(false);
 
+            // Background refresh
             profileStore.getProfile().then(async (res) => {
                 const profile = res.ok || null;
                 if (profile) {
@@ -49,10 +53,11 @@ export async function loadUserProfile(forceRefresh = false) {
             userProfile.set(null);
             localStorage.removeItem(CACHE_KEY);
         }
-
     } catch (err) {
         console.error('Error loading profile:', err);
         userProfile.set(null);
+    } finally {
+        // pageLoading.set(false);
     }
 }
 

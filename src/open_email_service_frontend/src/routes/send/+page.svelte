@@ -11,9 +11,9 @@
   let attachments = []; 
 
   let attachmentFile = null;
-let attachmentBlob = null;
+  let attachmentBlob = null;
 
-   let currentTheme;
+  let currentTheme;
   let currentColors;
 
   const unsubscribeTheme = theme.subscribe(value => {
@@ -42,7 +42,7 @@ async function handleSendMail() {
 
   const mail = {
     to,
-    subject,
+    subject: opt(subject),
     body,
     isReply: false,
     parentMailId: [],

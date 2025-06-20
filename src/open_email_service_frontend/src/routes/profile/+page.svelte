@@ -43,77 +43,69 @@
   });
 
 
- function opt(value) {
-  if (value === undefined || value === null || value === '') {
-    return [];  
-  }
-  return [value]; 
-}
+    function opt(value) {
+      if (value === undefined || value === null || value === '') {
+        return [];  // represents absence of value
+      }
+      return [value];  // not wrapped in array
+    }
 
-  async function handleSubmit() {
-    try {
-      submitting = true;
-      const newProfileImageArray = profileImageBlob
-        ? await blobToUint8Array(profileImageBlob)
-        : [];
 
-      const optionalFields = {
+async function handleSubmit() {
+  try {
+    submitting = true;
+    const newProfileImageArray = profileImageBlob
+      ? await blobToUint8Array(profileImageBlob)
+      : profileImageUrl;
+
+    if (profile) {
+      const updateData = {
+        name: (name !== profile.name ? opt(name) : opt(profile.name)),
+        surname: (surname !== profile.surname ? opt(surname) : opt(profile.surname)),
+        userAddress: (userAddress !== profile.userAddress ? opt(userAddress) : profile.userAddress),
+        status: (status !== profile.status ? opt(status) : profile.status),
+        description: (description !== profile.description ? opt(description) : profile.description)
+      };
+
+      const currentImageArray = profile.profileImage || [];
+      const imageChanged = (
+        newProfileImageArray.length !== currentImageArray.length ||
+        !newProfileImageArray.every((val, index) => val === currentImageArray[index])
+      );
+
+      updateData.profileImage = imageChanged 
+        ? opt(newProfileImageArray) 
+        : (currentImageArray);
+
+      console.log("Submitting profile update:", updateData);
+      await profileStore.updateProfile(updateData);
+      getUserProfile();
+    } else {
+      const createData = {
+        name: name,
+        surname: surname,
+        userAddress: userAddress,
         status: opt(status),
         description: opt(description),
         profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
       };
 
-      if (profile) {
-        const updateData = {};
-
-        updateData.name = opt(name);
-        updateData.surname = opt(surname);
-        updateData.userAddress = opt(userAddress);
-        updateData.status = opt(status);
-        updateData.description = opt(description);
-
-        const currentImageArray = profile.profileImage || [];
-        const imageChanged = (
-          newProfileImageArray.length !== currentImageArray.length ||
-          !newProfileImageArray.every((val, index) => val === currentImageArray[index])
-        );
-
-        if (imageChanged) updateData.profileImage = opt(newProfileImageArray);
-
-        const hasChanged = Object.keys(updateData).length > 0;
-
-        if (hasChanged) {
-          console.log("Updating profile with:", updateData);
-          await profileStore.updateProfile(updateData);
-          getUserProfile();
-        } else {
-          console.log("No changes detected");
-        }
-
-      } else {
-        const createData = {
-          name,
-          surname,
-          userAddress,
-          ...optionalFields
-        };
-
-        console.log("Creating profile with:", createData);
-        await profileStore.createProfile(createData);
-        await goto('/');
-      }
-      showSuccess = true;
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      showSuccess = false;
-      
-      isEditMode = false;
-    } catch (error) {
-      console.error("Error submitting profile:", error);
-    } finally {
-      submitting = false;
+      await profileStore.createProfile(createData);
+      await goto('/home');
     }
+    
+    showSuccess = true;
+    window.dispatchEvent(new CustomEvent('profileUpdated'));
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    showSuccess = false;
+    
+    isEditMode = false;
+  } catch (error) {
+    console.error("Error submitting profile:", error);
+  } finally {
+    submitting = false;
   }
+}
 
 
 function blobToUint8Array(blob) {
@@ -146,7 +138,7 @@ function handleImageUpload(event) {
   return profileStore.getProfile()
     .then((res) => {
       profile = res?.ok || null;
-      console.log("Profile fetched:", profile);
+      // console.log("Profile fetched:", profile);
       if (profile) {
         name = profile.name || '';
         surname = profile.surname || '';
@@ -154,7 +146,7 @@ function handleImageUpload(event) {
         status = profile.status || '';
         description = profile.description || '';
         profileImageUrl = profile.profileImage
-          ? URL.createObjectURL(new Blob(profile.profileImage))
+          ? profile.profileImage
           : '';
       }
     })
@@ -164,10 +156,18 @@ function handleImageUpload(event) {
 }
 
 
+
  onMount(() => {
+  
+
   (async () => {
+     if (!authSignedInStore) {
+    console.warn("User is not signed in, redirecting to login page");
+    signOut();
+  }
+  
     loading = true;
-    console.log("Profile page mounted");
+    // console.log("Profile page mounted");
     await getUserProfile();  
     loading = false;
   })();
@@ -236,7 +236,7 @@ function handleImageUpload(event) {
       {#if profileImageUrl}
         <div class="flex-shrink-0">
           <img 
-            src={profileImageUrl} 
+            src={URL.createObjectURL(new Blob(profileImageUrl))} 
             alt="Profile Image" 
             class="w-28 h-28 rounded-full object-cover border-4 shadow-sm"
             style="border-color: {currentColors.accent}"
@@ -287,7 +287,7 @@ function handleImageUpload(event) {
         {#if profileImageUrl || profileImageBlob}
           <div class="flex justify-center">
             <img 
-              src={profileImageBlob ? URL.createObjectURL(profileImageBlob) : profileImageUrl} 
+              src={profileImageBlob ? URL.createObjectURL(profileImageBlob) : URL.createObjectURL(new Blob(profileImageUrl))} 
               alt="Profile Preview" 
               class="w-32 h-32 rounded-full object-cover border-2"
               style="border-color: {currentColors.borderColor}"

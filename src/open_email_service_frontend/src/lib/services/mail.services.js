@@ -20,7 +20,7 @@ export class MailService {
 
     let dto = {
       to: emailData.to,
-      subject: emailData.subject,
+      subject: emailData.subject || null,
       body: emailData.body,
       attachmentIds : emailData.attachmentIds || null,
       isReply: emailData.isReply,
