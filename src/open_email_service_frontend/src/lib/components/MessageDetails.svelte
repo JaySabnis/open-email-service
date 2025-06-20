@@ -46,9 +46,13 @@
     }
   }
 
-  onMount(async () => {
-    await getMail();
-  });
+  let lastMessageId = null;
+
+  $: if (message?.id && message.id !== lastMessageId) {
+    lastMessageId = message.id;
+    getMail();
+  }
+
 </script>
 
 <div 

@@ -9,7 +9,7 @@
   import { authStore } from '$lib/store/auth-store'; 
 
   const dispatch = createEventDispatcher();
-
+  export let selectedMessage;
   let searchTerm = "";
   let mails = [];
   let pageNumber = 1;
@@ -21,8 +21,10 @@
   let isSentPage = false;
   let error = null;
 
-  function selectMessage(msg) {
-    dispatch("select", msg);
+ function selectMessage(msg) {
+    if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
+      dispatch('select', msg);
+    }
   }
 
   async function getMails() {
@@ -74,9 +76,9 @@
   }
 </script>
 
-<div class="space-y-4 p-6 overflow-y-auto h-screen">
+<div class="space-y-4 p-6 overflow-y-auto h-screen bg-white">
   <h2 class="text-xl font-bold mb-4">
-    {isSentPage ? "Sent Messages" : "Inbox Messages"}
+    {isSentPage ? "Sent Mails" : "Inbox Mails"}
   </h2>
   
   <input
@@ -95,6 +97,7 @@
       {#each mails as msg, i}
         <div
           class="transition-all duration-200 border shadow-sm px-4 py-3 cursor-pointer flex justify-between items-start hover:opacity-95"
+          class:bg-blue-50={selectedMessage?.id === msg.id}
           on:click={() => selectMessage(msg)}
         >
           <div class="flex-1">
