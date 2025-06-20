@@ -8,7 +8,7 @@
 
   function handleSelect(event) {
     selectedMessage = event.detail;
-    console.log("Selected message in parent:", selectedMessage);
+    // console.log("Selected message in parent:", selectedMessage);
   }
 
   function handleClose() {

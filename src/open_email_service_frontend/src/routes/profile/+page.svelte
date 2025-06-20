@@ -3,12 +3,11 @@
   import { signOut } from "$lib/services/auth.services";
   import { authSignedInStore } from "$lib/derived/auth.derived";
   import { profileStore } from "$lib/store/profile-store";
-  import Loader from "$lib/components/loader.svelte";
-  import { loadUserProfile } from "$lib/store/user";
+  import { showLoader, hideLoader } from '$lib/store/loader-store'; 
   import { theme } from "$lib/store/theme";
   import { colors } from "$lib/store/colors";
   import { get } from 'svelte/store';
-    import { goto } from "$app/navigation"; 
+  import { goto } from "$app/navigation"; 
     
   let name = '';
   let surname = '';
@@ -16,7 +15,6 @@
   let status = '';
   let description = '';
   let profile = null;
-  let loading;
   let isEditMode = false;
   let addressValid = null; 
   let addressError = '';
@@ -42,137 +40,123 @@
     }
   });
 
+  function opt(value) {
+    if (value === undefined || value === null || value === '') {
+      return [];  // represents absence of value
+    }
+    return [value];  // not wrapped in array
+  }
 
-    function opt(value) {
-      if (value === undefined || value === null || value === '') {
-        return [];  // represents absence of value
+  async function handleSubmit() {
+    try {
+      submitting = true;
+      showLoader(profile ? "Updating profile..." : "Creating profile...");
+      
+      const newProfileImageArray = profileImageBlob
+        ? await blobToUint8Array(profileImageBlob)
+        : profileImageUrl;
+
+      if (profile) {
+        const updateData = {
+          name: (name !== profile.name ? opt(name) : opt(profile.name)),
+          surname: (surname !== profile.surname ? opt(surname) : opt(profile.surname)),
+          userAddress: (userAddress !== profile.userAddress ? opt(userAddress) : profile.userAddress),
+          status: (status !== profile.status ? opt(status) : profile.status),
+          description: (description !== profile.description ? opt(description) : profile.description)
+        };
+
+        const currentImageArray = profile.profileImage || [];
+        const imageChanged = (
+          newProfileImageArray.length !== currentImageArray.length ||
+          !newProfileImageArray.every((val, index) => val === currentImageArray[index])
+        );
+
+        updateData.profileImage = imageChanged 
+          ? opt(newProfileImageArray) 
+          : (currentImageArray);
+
+        await profileStore.updateProfile(updateData);
+        await getUserProfile();
+      } else {
+        const createData = {
+          name: name,
+          surname: surname,
+          userAddress: userAddress,
+          status: opt(status),
+          description: opt(description),
+          profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
+        };
+
+        await profileStore.createProfile(createData);
+        await goto('/home');
       }
-      return [value];  // not wrapped in array
+      
+      showSuccess = true;
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      showSuccess = false;
+      isEditMode = false;
+    } catch (error) {
+      console.error("Error submitting profile:", error);
+    } finally {
+      submitting = false;
+      hideLoader();
     }
+  }
 
-
-async function handleSubmit() {
-  try {
-    submitting = true;
-    const newProfileImageArray = profileImageBlob
-      ? await blobToUint8Array(profileImageBlob)
-      : profileImageUrl;
-
-    if (profile) {
-      const updateData = {
-        name: (name !== profile.name ? opt(name) : opt(profile.name)),
-        surname: (surname !== profile.surname ? opt(surname) : opt(profile.surname)),
-        userAddress: (userAddress !== profile.userAddress ? opt(userAddress) : profile.userAddress),
-        status: (status !== profile.status ? opt(status) : profile.status),
-        description: (description !== profile.description ? opt(description) : profile.description)
+  function blobToUint8Array(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(new Uint8Array(reader.result));
       };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(blob);
+    });
+  }
 
-      const currentImageArray = profile.profileImage || [];
-      const imageChanged = (
-        newProfileImageArray.length !== currentImageArray.length ||
-        !newProfileImageArray.every((val, index) => val === currentImageArray[index])
-      );
-
-      updateData.profileImage = imageChanged 
-        ? opt(newProfileImageArray) 
-        : (currentImageArray);
-
-      console.log("Submitting profile update:", updateData);
-      await profileStore.updateProfile(updateData);
-      getUserProfile();
-    } else {
-      const createData = {
-        name: name,
-        surname: surname,
-        userAddress: userAddress,
-        status: opt(status),
-        description: opt(description),
-        profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
+  function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+      profileImageFile = file;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        profileImageBlob = new Blob([reader.result], { type: file.type });
       };
-
-      await profileStore.createProfile(createData);
-      await goto('/home');
+      reader.readAsArrayBuffer(file);
     }
-    
-    showSuccess = true;
-    window.dispatchEvent(new CustomEvent('profileUpdated'));
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    showSuccess = false;
-    
-    isEditMode = false;
-  } catch (error) {
-    console.error("Error submitting profile:", error);
-  } finally {
-    submitting = false;
   }
-}
 
-
-function blobToUint8Array(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(new Uint8Array(reader.result));
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
-
-
-function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (file) {
-    profileImageFile = file;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      profileImageBlob = new Blob([reader.result], { type: file.type });
-    };
-    reader.readAsArrayBuffer(file);
-  }
-}
-
-
-  function getUserProfile() {
-  return profileStore.getProfile()
-    .then((res) => {
+  async function getUserProfile() {
+    try {
+      showLoader('Loading profile...');
+      const res = await profileStore.getProfile();
       profile = res?.ok || null;
-      // console.log("Profile fetched:", profile);
       if (profile) {
         name = profile.name || '';
         surname = profile.surname || '';
         userAddress = profile.userAddress || '';
         status = profile.status || '';
         description = profile.description || '';
-        profileImageUrl = profile.profileImage
-          ? profile.profileImage
-          : '';
+        profileImageUrl = profile.profileImage || '';
       }
-    })
-    .catch((err) => {
-      console.error("Background profile fetch failed:", err);
-    });
-}
-
-
-
- onMount(() => {
-  
-
-  (async () => {
-     if (!authSignedInStore) {
-    console.warn("User is not signed in, redirecting to login page");
-    signOut();
+    } catch (err) {
+      console.error("Profile fetch failed:", err);
+    } finally {
+      hideLoader();
+    }
   }
-  
-    loading = true;
-    // console.log("Profile page mounted");
-    await getUserProfile();  
-    loading = false;
-  })();
-});
 
+  onMount(() => {
+    (async () => {
+      if (!authSignedInStore) {
+        console.warn("User is not signed in, redirecting to login page");
+        signOut();
+      }
+      
+      await getUserProfile();  
+    })();
+  });
 
   function onAddressInput(event) {
     userAddress = event.target.value;
@@ -195,14 +179,13 @@ function handleImageUpload(event) {
     }
   }
 
+  onDestroy(() => {
+    unsubscribeTheme();
+  });
 </script>
 
 
-{#if loading}
-  <Loader message="Fetching your profile.data..." />
-  {:else if submitting}
-  <Loader message={profile ? "Updating profile..." : "Creating profile..."} />
-{:else if showSuccess}
+{#if showSuccess}
   <div class="text-center py-8">
     <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-green-100 text-green-500">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,63 +1,17 @@
 <script>
-  import { signOut } from "$lib/services/auth.services";
-  import { authSignedInStore } from "$lib/derived/auth.derived";
-  import { theme } from '$lib/store/theme.js';
-  import { colors } from '$lib/store/colors.js';
-  import { onDestroy } from 'svelte';
-  import { get } from 'svelte/store';
-  import Outgoing from "$lib/components/outgoing.svelte";
-  
-  if(!authSignedInStore){
-    signOut();
-  }
-
-  let currentTheme = 'light';
-  let currentColors = colors.light;
-  let btnBgColor = currentColors?.btn;
-
-
-  const unsubscribeTheme = theme.subscribe(value => {
-    currentTheme = value;
-    const colorsValue = get(colors);
-    currentColors = colorsValue[currentTheme];
-
-     btnBgColor = currentColors.btn; 
-     
-    if (typeof window !== "undefined") {
-      if (value === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  });
-
-  onDestroy(() => {
-    unsubscribeTheme();
-  });
-
-  function handleMouseEnter() {
-    btnBgColor = currentColors.btnHover;
-  }
-
-  function handleMouseLeave() {
-    btnBgColor = currentColors.btn;
-  }
-
+  import MessageComponent from "$lib/components/MessageComponent.svelte";
+  import NewSidebar from "$lib/components/NewSidebar.svelte";
+  import WriteMail from "$lib/components/WriteMail.svelte";
+  import { showWriteMail, closeWriteMail } from '$lib/store/ui';
 </script>
 
-<main>
-  <!-- <div class="flex justify-end mb-4 p-4">
-    <a
-      href="/send"
-      class="font-semibold py-2 px-4 rounded shadow transition"
-      style="background-color: {btnBgColor}; color: {currentColors.btnText};"
-      on:mouseenter={handleMouseEnter}
-      on:mouseleave={handleMouseLeave}
-    >
-      Send Email
-    </a>
-  </div> -->
+<div class="w-full">
+  <MessageComponent />
 
-    <Outgoing/>
-</main>
+  {#if $showWriteMail}
+    <div class="fixed bottom-0 right-30 w-100 max-w-full border-t border-l border-gray-300 dark:border-gray-700 shadow-lg p-0 z-50"
+         style="background-color: var(--background-color, white);">
+      <WriteMail on:close={closeWriteMail} />
+    </div>
+  {/if}
+</div>
