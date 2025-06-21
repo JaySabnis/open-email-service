@@ -187,7 +187,7 @@
 
 
 <svelte:head>
-  <title>Profile</title>
+  <title>Open Mail | Profile</title>
 </svelte:head>
 
 

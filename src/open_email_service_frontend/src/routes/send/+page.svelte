@@ -117,7 +117,7 @@
 
 
 <svelte:head>
-  <title>Send Mails</title>
+  <title>Open Mail | Send Mails</title>
 </svelte:head>
 
 

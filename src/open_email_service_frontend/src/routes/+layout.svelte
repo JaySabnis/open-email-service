@@ -71,6 +71,7 @@
   }
 
   onMount(async () => {
+    // signOut();
     await initializeApp();
 
     const profileUpdateListener = async () => {

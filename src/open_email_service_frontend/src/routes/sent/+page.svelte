@@ -7,7 +7,7 @@
 
 
 <svelte:head>
-  <title>Outgoing</title>
+  <title>Open Mail | Outgoing</title>
 </svelte:head>
 
 <div class="w-full">

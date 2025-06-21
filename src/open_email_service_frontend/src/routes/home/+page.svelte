@@ -6,7 +6,7 @@
 
 
 <svelte:head>
-  <title>Inbox</title>
+  <title>Open Mail | Inbox</title>
 </svelte:head>
 
 
