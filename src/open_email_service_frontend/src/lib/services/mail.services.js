@@ -51,4 +51,24 @@ export class MailService {
     const result = await identityActor.getMailById(mailId);
     return result;
   }
+
+  async markItAsImportant(mailId) {
+    console.log(mailId,"mail id received")
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.markItAsImportant(mailId);
+    console.log(result,"result here")
+    return result;
+  }
+
+  async markAsNotImportant(mailId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.markAsNotImportant(mailId);
+    return result;
+  }
 }

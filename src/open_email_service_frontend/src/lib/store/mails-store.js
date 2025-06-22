@@ -21,12 +21,22 @@ function mailStore() {
     return new MailService().getMailById(mailId);
   }
 
+  async function markItAsImportant(mailId) {
+    return new MailService().markItAsImportant(mailId);
+  }
+
+  async function markAsNotImportant(mailId) {
+    return new MailService().markAsNotImportant(mailId);
+  }
+
   return {
     fetchInboxMails,
     sendEmails,
     fetchOutboxMails,
     subscribe,
-    getMailById
+    getMailById,
+    markItAsImportant,
+    markAsNotImportant
   };
 }
 
