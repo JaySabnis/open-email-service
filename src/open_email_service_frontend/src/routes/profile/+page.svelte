@@ -179,6 +179,15 @@
     }
   }
 
+  async function logout() {
+    try {
+      await signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }
+
   onDestroy(() => {
     unsubscribeTheme();
   });
@@ -449,7 +458,7 @@
             Description
           </label>
         </div>
-
+        <div class="flex flex-row items-center space-x-4 justify-center">
         <div class="text-center space-x-4">
          <button 
           type="submit" 
@@ -459,18 +468,31 @@
                 --btn-hover: {currentColors.btnHover}"
         >
           {profile ? 'Update' : 'Save'} Profile
-        </button>
-                  
+        </button>         
+
           {#if profile}
             <button 
               type="button" 
               on:click={() => isEditMode = false} 
               class="px-4 py-2 rounded-md font-medium transition"
               style="background-color: {currentColors.btnSecondary}; 
-                     color: {currentColors.color};
-                     border: 1px solid {currentColors.borderColor}"
+                    color: {currentColors.color};
+                    border: 1px solid {currentColors.borderColor}"
             >
               Cancel
+            </button>
+          {/if}
+
+          {#if !profile}
+            <button 
+              type="button" 
+              on:click={logout}
+              class="px-5 py-2 rounded-md font-medium transition"
+              style="background-color: {currentColors.btnSecondary}; 
+                    color: {currentColors.color};
+                    border: 1px solid {currentColors.borderColor}"
+            >
+              Logout
             </button>
           {/if}
         </div>
