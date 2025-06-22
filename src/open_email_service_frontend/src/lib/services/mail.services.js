@@ -7,7 +7,7 @@ export class MailService {
   async fetchInboxMails(pageNumberParam=null,pageSizeParam=null) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     const pageNumber = pageNumberParam || null;
     const pageSize = pageSizeParam || null;
@@ -16,7 +16,7 @@ export class MailService {
   }
 
   async sendEmails(emailData){
-    const identityActor = await ActorFactory.createIdentityActor(authStore, "bd3sg-teaaa-aaaaa-qaaba-cai");
+    const identityActor = await ActorFactory.createIdentityActor(authStore, "52yko-eaaaa-aaaaa-qauvq-cai");
 
     let dto = {
       to: emailData.to,
@@ -34,7 +34,7 @@ export class MailService {
   async fetchOutboxMails(pageNumberParam=null,pageSizeParam=null) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
 
     const pageNumber = pageNumberParam || null;
@@ -46,7 +46,7 @@ export class MailService {
   async getMailById(mailId) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     const result = await identityActor.getMailById(mailId);
     return result;
@@ -56,7 +56,7 @@ export class MailService {
     console.log(mailId,"mail id received")
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     const result = await identityActor.markItAsImportant(mailId);
     console.log(result,"result here")
@@ -66,7 +66,7 @@ export class MailService {
   async markAsNotImportant(mailId) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     const result = await identityActor.markAsNotImportant(mailId);
     return result;

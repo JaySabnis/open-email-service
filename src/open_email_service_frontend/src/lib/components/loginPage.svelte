@@ -6,7 +6,8 @@
   async function handleLogin() {
     try {
       const params = {
-        domain: `http://localhost:4943/?canisterId=qhbym-qaaaa-aaaaa-aaafq-cai`,
+        // domain: `http://localhost:4943/?canisterId=qhbym-qaaaa-aaaaa-aaafq-cai`,
+        domain:`https://identity.ic0.app/`
       };
       
       await signIn(params);

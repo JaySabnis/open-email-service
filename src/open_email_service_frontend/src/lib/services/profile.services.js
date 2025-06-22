@@ -7,7 +7,7 @@ export class ProfileService {
   async createProfile(data) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
 
     let dto = {
@@ -26,7 +26,7 @@ export class ProfileService {
   async getProfile() {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     const result = await identityActor.getProfile();
     return result;
@@ -35,7 +35,7 @@ export class ProfileService {
   async updateProfile(data) {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
 
     let dto = {
@@ -53,7 +53,7 @@ export class ProfileService {
    async isUserAddressAvailable(userAddress){
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     let dto = {
       userAddress
@@ -65,7 +65,7 @@ export class ProfileService {
   async getProfileByUserAddress(userAddress){
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
-      "bd3sg-teaaa-aaaaa-qaaba-cai",
+      "52yko-eaaaa-aaaaa-qauvq-cai",
     );
     
     const result = await identityActor.getProfileByUserAddress(userAddress);
