@@ -6,6 +6,14 @@ import { browser } from '$app/environment';
 
 let authClient;
 
+const NNS_IC_ORG_ALTERNATIVE_ORIGIN = "https://5p73d-fiaaa-aaaaa-qauwa-cai.icp0.io";
+const NNS_IC_APP_DERIVATION_ORIGIN =
+  "https://5p73d-fiaaa-aaaaa-qauwa-cai.icp0.io";
+
+const isNnsAlternativeOrigin = () => {
+  return window.location.origin === NNS_IC_ORG_ALTERNATIVE_ORIGIN;
+};
+
 const initAuthStore = () => {
     const initialValue = browser 
         ? JSON.parse(localStorage.getItem('auth')) || { identity: undefined }
@@ -31,7 +39,7 @@ const initAuthStore = () => {
             return identity;
         },
 
-        signIn: ({ domain }) =>
+        signIn: ({ domain = "https://5p73d-fiaaa-aaaaa-qauwa-cai.icp0.io" }) =>
             new Promise(async (resolve, reject) => {
                 try {
                     authClient = authClient ?? (await createAuthClient());
@@ -49,6 +57,9 @@ const initAuthStore = () => {
                             reject(err);
                         },
                         identityProvider,
+                         ...(isNnsAlternativeOrigin() && {
+                                derivationOrigin: NNS_IC_APP_DERIVATION_ORIGIN,
+                            })
                     });
                 } catch (err) {
                     console.error("Login error:", err);

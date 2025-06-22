@@ -10,7 +10,7 @@ export class ActorFactory {
   ) {
     const hostOptions = {
       // host:`http://localhost:4943/?canisterId=qhbym-qaaaa-aaaaa-aaafq-cai`,
-      host: `https://identity.ic0.app/`,
+      host: `https://5p73d-fiaaa-aaaaa-qauwa-cai.icp0.io/`,
       identity,
     };
 
