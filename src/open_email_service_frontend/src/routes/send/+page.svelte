@@ -4,16 +4,16 @@
   import { colors } from '$lib/store/colors.js';
   import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
+  import { showLoader, hideLoader } from '$lib/store/loader-store'; 
+  import { goto } from '$app/navigation';
   
   let to = "";
   let subject = "";
   let body = "";
   let attachments = []; 
-
   let attachmentFile = null;
-let attachmentBlob = null;
-
-   let currentTheme;
+  let attachmentBlob = null;
+  let currentTheme;
   let currentColors;
 
   const unsubscribeTheme = theme.subscribe(value => {
@@ -33,66 +33,75 @@ let attachmentBlob = null;
     unsubscribeTheme();
   });
 
-async function handleSendMail() {
-  let attachmentIds = [];
-    if (attachmentBlob) {
-    const base64String = await blobToBase64(attachmentBlob);
-    attachmentIds = [base64String];
+  async function handleSendMail() {
+    try {
+      showLoader('Sending email...');
+      
+      let attachmentIds = [];
+      if (attachmentBlob) {
+        const base64String = await blobToBase64(attachmentBlob);
+        attachmentIds = [base64String];
+      }
+
+      const mail = {
+        to,
+        subject: opt(subject),
+        body,
+        isReply: false,
+        parentMailId: [],
+        attachmentIds
+      };
+
+      await mailsStore.sendEmails(mail);
+      
+      to = "";
+      subject = "";
+      body = "";
+      attachmentFile = null;
+      attachmentBlob = null;
+      
+      await goto('/sent');
+    } catch (error) {
+      console.error('Error sending email:', error);
+    } finally {
+      hideLoader(); 
+    }
   }
 
-  const mail = {
-    to,
-    subject,
-    body,
-    isReply: false,
-    parentMailId: [],
-    attachmentIds
-  };
-
-  const response = await mailsStore.sendEmails(mail);
-  // console.log(response,'response')
-
-  to = "";
-  subject = "";
-  body = "";
-  attachmentFile = null;
-  attachmentBlob = null;
-}
-
-   function opt(value) {
-  if (value === undefined || value === null || value === '') {
-    return [];  
+  function opt(value) {
+    if (value === undefined || value === null || value === '') {
+      return [];  
+    }
+    return [value]; 
   }
-  return [value]; 
-}
 
-function handleAttachmentUpload(event) {
-  const file = event.target.files[0];
-  if (file) {
-    attachmentFile = file;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      attachmentBlob = new Blob([reader.result], { type: file.type });
-    };
-    reader.readAsArrayBuffer(file);
+  function handleAttachmentUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+      attachmentFile = file;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        attachmentBlob = new Blob([reader.result], { type: file.type });
+      };
+      reader.readAsArrayBuffer(file);
+    }
   }
-}
 
 
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result.split(',')[1]; 
-      resolve(base64String);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(',')[1]; 
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
 
 
-
+  
 </script>
 
 <style>
@@ -105,6 +114,12 @@ function blobToBase64(blob) {
     cursor: pointer;
   }
 </style>
+
+
+<svelte:head>
+  <title>Open Mail | Send Mails</title>
+</svelte:head>
+
 
 <div class="max-w-xl mx-auto p-6 mt-10 rounded-lg shadow-lg" style="background-color: {currentColors.cardBg};">
   <h1 class="text-2xl font-semibold mb-6 text-center" style="color: {currentColors.headingColor};">Send Email</h1>

@@ -1,14 +1,23 @@
 import { createAuthClient } from "../utils/auth.utils";
 import { AuthClient } from "@dfinity/auth-client";
 import { writable } from "svelte/store";
-import { AUTH_MAX_TIME_TO_LIVE} from '../constants/app.constants'
+import { AUTH_MAX_TIME_TO_LIVE } from '../constants/app.constants';
+import { browser } from '$app/environment';
 
 let authClient;
 
 const initAuthStore = () => {
-    const { subscribe, set, update } = writable({
-        identity: undefined,
-    });
+    const initialValue = browser 
+        ? JSON.parse(localStorage.getItem('auth')) || { identity: undefined }
+        : { identity: undefined };
+
+    const { subscribe, set, update } = writable(initialValue);
+
+    if (browser) {
+        subscribe(($auth) => {
+            localStorage.setItem('auth', JSON.stringify($auth));
+        });
+    }
 
     return {
         subscribe,
@@ -16,45 +25,48 @@ const initAuthStore = () => {
         sync: async () => {
             authClient = authClient ?? (await createAuthClient());
             const isAuthenticated = await authClient.isAuthenticated();
-
-            set({
-                identity: isAuthenticated ? authClient.getIdentity() : null,
-            });
+            const identity = isAuthenticated ? authClient.getIdentity() : null;
+            
+            set({ identity });
+            return identity;
         },
 
         signIn: ({ domain }) =>
-            // eslint-disable-next-line no-async-promise-executor
             new Promise(async (resolve, reject) => {
-                authClient = authClient ?? (await createAuthClient());
-                const identityProvider = domain;
+                try {
+                    authClient = authClient ?? (await createAuthClient());
+                    const identityProvider = domain;
 
-                await authClient?.login({
-                    maxTimeToLive: AUTH_MAX_TIME_TO_LIVE,
-                    onSuccess: () => {
-                        update((state) => ({
-                            ...state,
-                            identity: authClient?.getIdentity(),
-                        }));
-
-                        resolve();
-                    },
-                    onError: reject,
-                    identityProvider,
-                });
+                    await authClient.login({
+                        maxTimeToLive: AUTH_MAX_TIME_TO_LIVE,
+                        onSuccess: () => {
+                            const identity = authClient.getIdentity();
+                            set({ identity });
+                            resolve(identity);
+                        },
+                        onError: (err) => {
+                            console.error("Login failed:", err);
+                            reject(err);
+                        },
+                        identityProvider,
+                    });
+                } catch (err) {
+                    console.error("Login error:", err);
+                    reject(err);
+                }
             }),
 
         signOut: async () => {
-            const client = authClient ?? (await createAuthClient());
-
-            await client.logout();
-
-            authClient = null;
-
-            update((state) => ({
-                ...state,
-                identity: null,
-            }));
-            localStorage.removeItem("userProfileCache");
+            try {
+                const client = authClient ?? (await createAuthClient());
+                await client.logout();
+                authClient = null;
+                set({ identity: null });
+                localStorage.removeItem("userProfileCache");
+                localStorage.removeItem("auth");
+            } catch (err) {
+                console.error("Logout error:", err);
+            }
         },
     };
 };

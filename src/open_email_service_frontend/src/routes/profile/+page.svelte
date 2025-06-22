@@ -3,19 +3,18 @@
   import { signOut } from "$lib/services/auth.services";
   import { authSignedInStore } from "$lib/derived/auth.derived";
   import { profileStore } from "$lib/store/profile-store";
-  import Loader from "$lib/components/loader.svelte";
-  import { loadUserProfile } from "$lib/store/user";
+  import { showLoader, hideLoader } from '$lib/store/loader-store'; 
   import { theme } from "$lib/store/theme";
   import { colors } from "$lib/store/colors";
   import { get } from 'svelte/store';
-
+  import { goto } from "$app/navigation"; 
+    
   let name = '';
   let surname = '';
   let userAddress = '';
   let status = '';
   let description = '';
   let profile = null;
-  let loading = true;
   let isEditMode = false;
   let addressValid = null; 
   let addressError = '';
@@ -41,38 +40,30 @@
     }
   });
 
-  if (!authSignedInStore) {
-    signOut();
+  function opt(value) {
+    if (value === undefined || value === null || value === '') {
+      return [];  // represents absence of value
+    }
+    return [value];  // not wrapped in array
   }
-
- function opt(value) {
-  if (value === undefined || value === null || value === '') {
-    return [];  
-  }
-  return [value]; 
-}
 
   async function handleSubmit() {
     try {
       submitting = true;
+      showLoader(profile ? "Updating profile..." : "Creating profile...");
+      
       const newProfileImageArray = profileImageBlob
         ? await blobToUint8Array(profileImageBlob)
-        : [];
-
-      const optionalFields = {
-        status: opt(status),
-        description: opt(description),
-        profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
-      };
+        : profileImageUrl;
 
       if (profile) {
-        const updateData = {};
-
-        updateData.name = opt(name);
-        updateData.surname = opt(surname);
-        updateData.userAddress = opt(userAddress);
-        updateData.status = opt(status);
-        updateData.description = opt(description);
+        const updateData = {
+          name: (name !== profile.name ? opt(name) : opt(profile.name)),
+          surname: (surname !== profile.surname ? opt(surname) : opt(profile.surname)),
+          userAddress: (userAddress !== profile.userAddress ? opt(userAddress) : profile.userAddress),
+          status: (status !== profile.status ? opt(status) : profile.status),
+          description: (description !== profile.description ? opt(description) : profile.description)
+        };
 
         const currentImageArray = profile.profileImage || [];
         const imageChanged = (
@@ -80,110 +71,92 @@
           !newProfileImageArray.every((val, index) => val === currentImageArray[index])
         );
 
-        if (imageChanged) updateData.profileImage = opt(newProfileImageArray);
+        updateData.profileImage = imageChanged 
+          ? opt(newProfileImageArray) 
+          : (currentImageArray);
 
-        const hasChanged = Object.keys(updateData).length > 0;
-
-        if (hasChanged) {
-          console.log("Updating profile with:", updateData);
-          await profileStore.updateProfile(updateData);
-          const forceRefresh = true;
-          await loadUserProfile(forceRefresh);
-        } else {
-          console.log("No changes detected");
-        }
-
+        await profileStore.updateProfile(updateData);
+        await getUserProfile();
       } else {
         const createData = {
-          name,
-          surname,
-          userAddress,
-          ...optionalFields
+          name: name,
+          surname: surname,
+          userAddress: userAddress,
+          status: opt(status),
+          description: opt(description),
+          profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
         };
 
-        console.log("Creating profile with:", createData);
         await profileStore.createProfile(createData);
-        await loadUserProfile(true);
+        await goto('/home');
       }
+      
       showSuccess = true;
       window.dispatchEvent(new CustomEvent('profileUpdated'));
       await new Promise(resolve => setTimeout(resolve, 1500));
       showSuccess = false;
-      
       isEditMode = false;
     } catch (error) {
       console.error("Error submitting profile:", error);
     } finally {
       submitting = false;
+      hideLoader();
     }
   }
 
-
-function blobToUint8Array(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve(new Uint8Array(reader.result));
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
-
-
-function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (file) {
-    profileImageFile = file;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      profileImageBlob = new Blob([reader.result], { type: file.type });
-    };
-    reader.readAsArrayBuffer(file);
+  function blobToUint8Array(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(new Uint8Array(reader.result));
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(blob);
+    });
   }
-}
 
+  function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+      profileImageFile = file;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        profileImageBlob = new Blob([reader.result], { type: file.type });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
 
-
-    function updateProfileFromStorage() {
-    loading = true;
+  async function getUserProfile() {
     try {
-      const profileData = JSON.parse(localStorage.getItem('userProfileCache'));
-      if (profileData) {
-      profile = profileData.data || null;
-      name = profile.name || '';
-      surname = profile.surname || '';
-      userAddress = profile.userAddress || '';
-      status = profile.status || '';
-      description = profile.description || '';
-      profileImageUrl= profile.profileImage || ''
-      
+      showLoader('Loading profile...');
+      const res = await profileStore.getProfile();
+      profile = res?.ok || null;
+      if (profile) {
+        name = profile.name || '';
+        surname = profile.surname || '';
+        userAddress = profile.userAddress || '';
+        status = profile.status || '';
+        description = profile.description || '';
+        profileImageUrl = profile.profileImage || '';
       }
-    } catch (error) {
-      console.error('Error reading profile from localStorage:', error);
+    } catch (err) {
+      console.error("Profile fetch failed:", err);
+    } finally {
+      hideLoader();
     }
-    loading = false;
   }
 
   onMount(() => {
-    updateProfileFromStorage();
-    window.addEventListener('profileUpdated', updateProfileFromStorage);
-    window.addEventListener('storage', handleStorageEvent);
+    (async () => {
+      if (!authSignedInStore) {
+        console.warn("User is not signed in, redirecting to login page");
+        signOut();
+      }
+      
+      await getUserProfile();  
+    })();
   });
-
-  onDestroy(() => {
-    window.removeEventListener('profileUpdated', updateProfileFromStorage);
-    window.removeEventListener('storage', handleStorageEvent);
-    unsubscribeTheme();
-  });
-
-  function handleStorageEvent(event) {
-    if (event.key === 'userProfileCache') {
-      updateProfileFromStorage();
-    }
-  }
-
 
   function onAddressInput(event) {
     userAddress = event.target.value;
@@ -206,14 +179,19 @@ function handleImageUpload(event) {
     }
   }
 
+  onDestroy(() => {
+    unsubscribeTheme();
+  });
 </script>
 
 
-{#if loading}
-  <Loader message="Fetching your profile.data..." />
-  {:else if submitting}
-  <Loader message={profile ? "Updating profile..." : "Creating profile..."} />
-{:else if showSuccess}
+
+<svelte:head>
+  <title>Open Mail | Profile</title>
+</svelte:head>
+
+
+{#if showSuccess}
   <div class="text-center py-8">
     <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-green-100 text-green-500">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -247,7 +225,7 @@ function handleImageUpload(event) {
       {#if profileImageUrl}
         <div class="flex-shrink-0">
           <img 
-            src={profileImageUrl} 
+            src={URL.createObjectURL(new Blob(profileImageUrl))} 
             alt="Profile Image" 
             class="w-28 h-28 rounded-full object-cover border-4 shadow-sm"
             style="border-color: {currentColors.accent}"
@@ -298,7 +276,7 @@ function handleImageUpload(event) {
         {#if profileImageUrl || profileImageBlob}
           <div class="flex justify-center">
             <img 
-              src={profileImageBlob ? URL.createObjectURL(profileImageBlob) : profileImageUrl} 
+              src={profileImageBlob ? URL.createObjectURL(profileImageBlob) : URL.createObjectURL(new Blob(profileImageUrl))} 
               alt="Profile Preview" 
               class="w-32 h-32 rounded-full object-cover border-2"
               style="border-color: {currentColors.borderColor}"

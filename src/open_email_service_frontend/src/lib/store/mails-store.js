@@ -13,15 +13,30 @@ function mailStore() {
     return new MailService().sendEmails(emailData);
   }
 
-  async function fetchOutboxMails() {
-    return new MailService().fetchOutboxMails();
+  async function fetchOutboxMails(pageNumberParam = null,pageSizeParam = null) {
+    return new MailService().fetchOutboxMails(pageNumberParam,pageSizeParam);
+  }
+
+  async function getMailById(mailId) {
+    return new MailService().getMailById(mailId);
+  }
+
+  async function markItAsImportant(mailId) {
+    return new MailService().markItAsImportant(mailId);
+  }
+
+  async function markAsNotImportant(mailId) {
+    return new MailService().markAsNotImportant(mailId);
   }
 
   return {
     fetchInboxMails,
     sendEmails,
     fetchOutboxMails,
-    subscribe
+    subscribe,
+    getMailById,
+    markItAsImportant,
+    markAsNotImportant
   };
 }
 

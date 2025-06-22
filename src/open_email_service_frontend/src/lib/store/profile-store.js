@@ -21,12 +21,17 @@ function createProfilStore() {
     return new ProfileService().isUserAddressAvailable(userAddress);
   }
 
+  async function getProfileByUserAddress(userAddress){
+    return new ProfileService().getProfileByUserAddress(userAddress);
+  }
+
   return {
     createProfile,
     getProfile,
     updateProfile,
     subscribe,
-    isUserAddressAvailable
+    isUserAddressAvailable,
+    getProfileByUserAddress
   };
 }
 

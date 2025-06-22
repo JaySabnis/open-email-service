@@ -1,137 +1,117 @@
 <script>
-  import { authSignedInStore } from "$lib/derived/auth.derived";
-  import Sidebar from "$lib/components/sidebar.svelte";
-  import { goto } from "$app/navigation";
-  import Navbar from "$lib/components/navbar.svelte";
-  import { onMount } from "svelte";
-  import { loadUserProfile } from "$lib/store/user";
-  import { theme } from "$lib/store/theme";
-  import { colors } from "$lib/store/colors";
-  import { get } from 'svelte/store';
-  import "../app.css";
+  import { onMount } from 'svelte';
+  import { authStore } from '$lib/store/auth-store';
+  import { profileStore } from '$lib/store/profile-store';
+  import { signOut } from '$lib/services/auth.services';
+  import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
+  import Sidebar from '$lib/components/NewSidebar.svelte';
+  import LoginPage from '$lib/components/loginPage.svelte';
+  import GlobalLoader from '$lib/components/GlobalLoader.svelte';
+  import { showLoader, hideLoader } from '$lib/store/loader-store';
+  import '../app.css';
 
-  let isSidebarOpen = false;
-  let isAuthenticated = false;
-  let isMobile = false;
+  let identity = null;
+  let profile = null;
+  let showSidebar = false;
+  let showLogin = false;
+  let initialized = false;
 
-  $: isAuthenticated = $authSignedInStore;
-
-  let currentTheme;
-  let currentColors;
-
-
-
-  const unsubscribeTheme = theme.subscribe(value => {
-    currentTheme = value;
-    const colorsValue = get(colors);
-    currentColors = colorsValue[currentTheme];
-    if (typeof window !== "undefined") {
-      if (value === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
+  async function fetchAndSetProfile() {
+    try {
+      showLoader('Loading profile...');
+      const res = await profileStore.getProfile();
+      
+      if (res?.err) {
+        throw new Error(res.err);
       }
-    }
-  });
-  
-  onMount(() => {
-    if (!isAuthenticated) {
-      goto("/");
-    }
 
-    if (window.innerWidth < 768) {
-      isMobile = true;
+      profile = res?.ok || null;
+      showSidebar = !!profile;
+      return profile;
+    } catch (err) {
+      console.error("Profile fetch failed:", err);
+      profile = null;
+      showSidebar = false;
+      return null;
+    } finally {
+      hideLoader();
     }
-    window.addEventListener("resize", () => {
-      isMobile = window.innerWidth < 768;
-    });
-    loadUserProfile();
-  });
+  }
 
-  const toggleSidebar = () => {
-    isSidebarOpen = !isSidebarOpen;
-  };
+  async function initializeApp() {
+    if (!browser) return;
+
+    try {
+      showLoader('Initializing...');
+      identity = await authStore.sync();
+      
+      if (!identity?.getPrincipal) {
+        showLogin = true;
+        return;
+      }
+
+      const profileExists = await fetchAndSetProfile();
+      const currentPath = window.location.pathname;
+
+      if (profileExists) {
+        if (currentPath === '/' || currentPath === '/profile') {
+          await goto('/home', { replaceState: true });
+        }
+      } else if (currentPath !== '/profile') {
+        await goto('/profile', { replaceState: true });
+      }
+    } catch (err) {
+      console.error("Initialization error:", err);
+      showLogin = true;
+    } finally {
+      initialized = true;
+      hideLoader();
+    }
+  }
+
+  onMount(async () => {
+    // signOut();
+    await initializeApp();
+
+    const profileUpdateListener = async () => {
+      showLoader('Updating profile...');
+      await fetchAndSetProfile();
+      hideLoader();
+    };
+
+    window.addEventListener('profileUpdated', profileUpdateListener);
+    
+    return () => {
+      window.removeEventListener('profileUpdated', profileUpdateListener);
+      hideLoader(); 
+    };
+  });
 </script>
 
-
-<div class="flex min-h-screen" style="
-          background-color: {currentColors.bgLightColor};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        ">
-  {#if isAuthenticated}
-    <Sidebar {isSidebarOpen} {toggleSidebar} />
-  {/if}
-
-  <div class=" flex flex-col w-full" style="
-          background-color: {currentColors.bgLightColor};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        ">
-    {#if isAuthenticated}
-      <Navbar {currentColors} />
-    {/if}
-
-    {#if isAuthenticated}
-      <div
-        class="w-full border-gray-300 p-2 flex items-center"
-        style="
-          background-color: {currentColors.surface};
-          color: {currentColors.color};
-          border-color: {currentColors.color};
-        "
-      >
-       <button
-          class="p-2 rounded-md"
-          style="background-color: {currentColors.bgLightColor}; color: {currentColors.color};"
-          aria-label="Toggle Sidebar"
-          on:click={toggleSidebar}
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            viewBox="0 0 24 24"
-          >
-            {#if isSidebarOpen}
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            {:else}
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            {/if}
-          </svg>
-        </button>
-        <span class="ml-2 text-sm">
-          Menu
-        </span>
-      </div>
-    {/if}
-
-    <main class="">
-      <slot></slot>
-    </main>
+{#if !initialized}
+  <div class="min-h-screen"></div>
+{:else if showLogin}
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md space-y-8">
+      <LoginPage />
+    </div>
   </div>
-</div>
+{:else}
+  <div class="flex">
+    {#if showSidebar}
+      <Sidebar {profile} />
+    {/if}
+    <div class="flex-1 {showSidebar ? 'ml-64' : ''}">
+      <slot />
+    </div>
+  </div>
+{/if}
+
+<GlobalLoader />
 
 <style>
-  @reference "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-  .layout-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-
-  .login-prompt {
-    text-align: center;
-  }
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
 </style>

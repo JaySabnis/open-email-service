@@ -61,5 +61,15 @@ export class ProfileService {
     const result = await identityActor.isUserAddressAvailable(userAddress);
     return result;
   }
+
+  async getProfileByUserAddress(userAddress){
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    
+    const result = await identityActor.getProfileByUserAddress(userAddress);
+    return result;
+  }
   
 }
