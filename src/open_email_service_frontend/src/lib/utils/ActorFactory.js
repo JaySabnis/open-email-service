@@ -27,12 +27,12 @@ export class ActorFactory {
     const agent = new HttpAgent({ ...options.agentOptions });
 
     //Note: do not deploy to mainnet
-      agent.fetchRootKey().catch((err) => {
-        console.warn(
-          "Unable to fetch root key. Ensure your local replica is running",
-        );
-        console.error(err);
-      });
+      // agent.fetchRootKey().catch((err) => {
+      //   console.warn(
+      //     "Unable to fetch root key. Ensure your local replica is running",
+      //   );
+      //   console.error(err);
+      // });
 
     return Actor.createActor(idlFactory, {
       agent,
