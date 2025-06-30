@@ -161,6 +161,6 @@
   />
     </div>
   {:else}
-    <p class="text-gray-500 text-center">No messages to show.</p>
+    <p class="text-gray-500 text-center">No mails to show.</p>
   {/if}
 </div>

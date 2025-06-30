@@ -5,7 +5,7 @@
   import { showLoader, hideLoader } from '$lib/store/loader-store';
   import WriteMail from './WriteMail.svelte'; 
   import {profileStore} from '$lib/store/profile-store'
-
+  import { generateImageSrc } from '$lib/utils/helpers';
   export let message;
 
   const dispatch = createEventDispatcher();
@@ -80,7 +80,7 @@
        <div class="flex items-center gap-3 mb-2">
           {#if fromUser?.profileImage}
             <img 
-              src={URL.createObjectURL(new Blob(fromUser.profileImage))}
+              src={generateImageSrc(fromUser.profileImage)}
               alt="Profile Image"
               class="w-10 h-10 rounded-full object-cover border border-gray-300"
             />
@@ -113,7 +113,7 @@
       {#if mailData?.body}
         {mailData.body}
       {:else}
-        <p class="text-gray-400 italic">No message content</p>
+        <p class="text-gray-400 italic">No mail content</p>
       {/if}
     </div>
 

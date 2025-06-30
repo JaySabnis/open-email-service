@@ -8,7 +8,8 @@
   import { colors } from "$lib/store/colors";
   import { get } from 'svelte/store';
   import { goto } from "$app/navigation"; 
-    
+  import { generateImageSrc } from '$lib/utils/helpers';
+  
   let name = '';
   let surname = '';
   let userAddress = '';
@@ -234,7 +235,7 @@
       {#if profileImageUrl}
         <div class="flex-shrink-0">
           <img 
-            src={URL.createObjectURL(new Blob(profileImageUrl))} 
+            src={generateImageSrc(profileImageUrl)} 
             alt="Profile Image" 
             class="w-28 h-28 rounded-full object-cover border-4 shadow-sm"
             style="border-color: {currentColors.accent}"
@@ -285,7 +286,7 @@
         {#if profileImageUrl || profileImageBlob}
           <div class="flex justify-center">
             <img 
-              src={profileImageBlob ? URL.createObjectURL(profileImageBlob) : URL.createObjectURL(new Blob(profileImageUrl))} 
+              src={profileImageBlob ? generateImageSrc(profileImageBlob) : generateImageSrc(profileImageUrl)} 
               alt="Profile Preview" 
               class="w-32 h-32 rounded-full object-cover border-2"
               style="border-color: {currentColors.borderColor}"
@@ -462,10 +463,7 @@
         <div class="text-center space-x-4">
          <button 
           type="submit" 
-          class="submit-btn px-6 py-2 rounded-md font-medium hover:shadow-md"
-          style="--btn-bg: {currentColors.btn};
-                --btn-text: {currentColors.btnText};
-                --btn-hover: {currentColors.btnHover}"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
         >
           {profile ? 'Update' : 'Save'} Profile
         </button>         

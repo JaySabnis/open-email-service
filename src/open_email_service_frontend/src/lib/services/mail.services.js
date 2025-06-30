@@ -8,6 +8,7 @@ export class MailService {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const pageNumber = pageNumberParam || null;
     const pageSize = pageSizeParam || null;
@@ -16,7 +17,10 @@ export class MailService {
   }
 
   async sendEmails(emailData){
-    const identityActor = await ActorFactory.createIdentityActor(authStore, "52yko-eaaaa-aaaaa-qauvq-cai");
+    const identityActor = await ActorFactory.createIdentityActor(authStore, 
+      "52yko-eaaaa-aaaaa-qauvq-cai"
+      // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
 
     let dto = {
       to: emailData.to,
@@ -35,6 +39,7 @@ export class MailService {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
 
     const pageNumber = pageNumberParam || null;
@@ -47,6 +52,7 @@ export class MailService {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const result = await identityActor.getMailById(mailId);
     return result;
@@ -57,6 +63,7 @@ export class MailService {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const result = await identityActor.markItAsImportant(mailId);
     console.log(result,"result here")
@@ -67,6 +74,7 @@ export class MailService {
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const result = await identityActor.markAsNotImportant(mailId);
     return result;

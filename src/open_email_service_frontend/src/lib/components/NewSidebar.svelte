@@ -3,6 +3,7 @@
   import { toggleWriteMail } from '$lib/store/ui';
   import { signOut } from "$lib/services/auth.services";
   import { onMount } from 'svelte';
+  import { generateImageSrc } from '$lib/utils/helpers';
   export let profile;
 
   let currentTheme;
@@ -33,7 +34,7 @@
   <div>
     <a href="/profile" class="block hover:bg-gray-700 p-2 rounded">
       <div class="p-4 flex items-center space-x-4 border-b border-gray-700">
-        <img src={URL.createObjectURL(new Blob(profile?.profileImage))} alt="Profile" class="w-12 h-12 rounded-full" />
+        <img src={generateImageSrc(profile?.profileImage)} alt="Profile" class="w-12 h-12 rounded-full" />
         <div>
           <div class="text-sm font-semibold">{profile?.name || "User"}</div>
           <div class="text-xs text-gray-400 truncate">{profile?.userAddress || "user@example.com"}</div>

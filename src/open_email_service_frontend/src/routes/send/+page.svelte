@@ -199,11 +199,7 @@
     <div class="text-center">
       <button
         type="submit"
-        class="px-6 py-2 rounded-md transition"
-        style="
-          background-color: {currentColors.btn};
-          color: {currentColors.btnText};
-        "
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
       >
         Send Email
       </button>
