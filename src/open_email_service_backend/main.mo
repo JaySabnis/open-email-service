@@ -21,8 +21,7 @@ actor {
   stable var stable_emailStore : [(Text, EmailTypes.Email)] = [];
   stable var stable_registries : [(Principal, EmailTypes.EmailRegistry)] = [];
   stable var stable_fileStore : [(Text, EmailTypes.File)] = [];
-  stable var stable_threads:[(Text,EmailTypes.Thread)]=[];
-  
+  stable var stable_threads : [(Text, EmailTypes.Thread)] = [];
 
   //profile manager
   let profileService = ProfileManager.ProfileManager();
@@ -79,15 +78,15 @@ actor {
     assert not Principal.isAnonymous(caller);
     emailManager.deleteEmail(caller, emailId);
   };
-  
-  public shared({ caller }) func markAsRead(emailId : Text):async (){
+
+  public shared ({ caller }) func markAsRead(emailId : Text) : async () {
     assert not Principal.isAnonymous(caller);
-    emailManager.markAsRead(caller,emailId);
+    emailManager.markAsRead(caller, emailId);
   };
 
-  public shared({ caller }) func markAsUnread(emailId : Text):async (){
+  public shared ({ caller }) func markAsUnread(emailId : Text) : async () {
     assert not Principal.isAnonymous(caller);
-    emailManager.markAsUnread(caller,emailId);
+    emailManager.markAsUnread(caller, emailId);
   };
 
   //TODO: make the functions input as a Command
@@ -121,6 +120,11 @@ actor {
     await emailManager.fetchOutboxMails(caller, pageNumber, pageSize);
   };
 
+  public shared ({ caller }) func fetchStarredMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+    assert not Principal.isAnonymous(caller);
+    await emailManager.fetchStarredMails(caller, pageNumber, pageSize);
+  };
+
   public func uploadFile(fileData : EmailCommands.FileRequestDTO) : async Result.Result<EmailCommands.FileResponseDTO, EmailTypes.FileErrors> {
     await emailManager.uploadFile(fileData);
   };
@@ -135,7 +139,7 @@ actor {
     stable_emailStore := emailManager.getStableEmailStore();
     stable_registries := emailManager.getStableRegistries();
     stable_fileStore := emailManager.getStableFileStore();
-    stable_threads:=emailManager.getStableThreads();
+    stable_threads := emailManager.getStableThreads();
   };
 
   system func postupgrade() {

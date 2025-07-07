@@ -255,6 +255,52 @@ module {
 
         };
 
+
+         //get list of sent mails
+        public func fetchStarredMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+
+            //authenticate user when fetching the emails.
+            let starredEmailIds : List.List<Text> = switch (registry.get(caller)) {
+                //todo: add logic to only fetch latest mails and not whole list.
+                case (?emailRegistry) emailRegistry.important;
+                case null List.nil();
+            };
+
+            let totalItems : Nat = List.size(starredEmailIds);
+
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
+                starredEmailIds,
+                func(id) {
+                    switch (emailStore.get(id)) {
+                        case (?email) {
+                            if (not email.isReply) {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
+                                    id = id;
+                                    from = email.from;
+                                    to = email.to;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
+                                    createdOn = email.createdOn;
+                                    starred = true;
+                                    readFlag = false;
+                                };
+
+                                return ?responseEmail;
+                            } else {
+                                return null;
+                            }
+
+                        }; // Extract the email if it exists
+                        case null null; // Skip if the email is null
+                    };
+                },
+            );
+
+            // page number is optional, default pagination(pageNumber=1, pageSize=10)
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, true);
+
+        };
+
         private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, totalItemSize : Nat, emails : List.List<EmailQueries.EmailResponseDTO>, isOutboxRequest : Bool) : EmailQueries.PaginatedEmailBodyResponseDTO {
 
             // Safely decrements pageNumber (returns 0 if pageNumber is 0)
@@ -405,6 +451,10 @@ module {
 
                     let threadBuffer = Buffer.Buffer<EmailQueries.EmailBodyResponseDTO>(emailThreadIds.size());
 
+                     //get starred email
+                    let importantMailsList : List.List<Text> = getImportantMailList(caller);
+
+
                     for (id in emailThreadIds.vals()) {
                         switch (emailStore.get(id)) {
                             case (?threadEmail) {
@@ -424,6 +474,12 @@ module {
 
                                 let attachments : [EmailQueries.FileResponseDTO] = Buffer.toArray(attachmentsBuffer);
 
+                                // Check if the current email ID exists in the importantMailsList
+                                let isStarred = switch (List.find<Text>(importantMailsList, func(listId) { listId == id })) {
+                                    case (?_) true;
+                                    case null false;
+                                };
+                               
                                 threadBuffer.add({
                                     id = id;
                                     from = threadEmail.from;
@@ -432,7 +488,7 @@ module {
                                     body = threadEmail.body;
                                     attachments = ?attachments;
                                     createdOn = threadEmail.createdOn;
-                                    starred = false;
+                                    starred = isStarred;
                                     readFlag = true;
                                 });
                             };
