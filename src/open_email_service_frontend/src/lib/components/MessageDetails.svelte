@@ -73,32 +73,9 @@
     </div>
   {:else}
     <div class="flex justify-between items-start mb-4">
-      <div>
-        <h2 class="text-2xl font-semibold text-gray-800 mb-2">
-          {mailData?.subject || 'No Subject'}
-        </h2>
-       <div class="flex items-center gap-3 mb-2">
-          {#if fromUser?.profileImage}
-            <img 
-              src={generateImageSrc(fromUser.profileImage)}
-              alt="Profile Image"
-              class="w-10 h-10 rounded-full object-cover border border-gray-300"
-            />
-          {/if}
-          <div>
-            <p class="text-sm text-gray-700 font-medium">
-              {fromUser?.name || ''} {fromUser?.surname || ''}
-            </p>
-            <p class="text-xs text-gray-500">
-              {mailData?.from || 'Unknown Sender'}
-            </p>
-          </div>
-        </div>
-
-        <p class="text-xs text-gray-500">
-          {new Date(Number(mailData?.createdOn) / 1_000_000).toLocaleString()}
-        </p>
-      </div>
+      <h2 class="text-2xl font-semibold text-gray-800 ml-[3.5rem]">
+        {mailData?.subject || 'No Subject'}
+      </h2>
       <button
         on:click={close}
         class="text-gray-500 hover:text-red-600 transition text-lg font-bold px-2"
@@ -109,7 +86,45 @@
       </button>
     </div>
 
-    <div class="flex-grow bg-white rounded-lg p-6 text-sm shadow-sm whitespace-pre-line text-gray-800">
+    <div class="flex gap-4 mb-4">
+      <div class="w-14 flex-shrink-0">
+        {#if fromUser?.profileImage}
+          <img 
+            src={generateImageSrc(fromUser.profileImage)}
+            alt="Profile Image"
+            class="w-12 h-12 rounded-full object-cover border border-gray-300 mt-1"
+          />
+        {/if}
+      </div>
+
+      <div class="flex-1 flex justify-between">
+        <div>
+          <div class="flex items-center flex-wrap gap-2 mb-1">
+            <p class="text-sm text-gray-700 font-medium">
+              {fromUser?.name || ''} {fromUser?.surname || ''}
+            </p>
+            <p class="text-xs text-gray-500 lowercase">
+              &lt;{mailData?.from || 'unknown@domain.com'}&gt;
+            </p>
+          </div>
+          <p class="text-xs text-gray-500 mb-1">
+            To: {mailData?.to || 'N/A'}
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <p class="text-xs text-gray-500 whitespace-nowrap">
+            {new Date(Number(mailData?.createdOn) / 1_000_000).toLocaleString()}
+          </p>
+          {#if mailData?.starred}
+            <span title="Starred" class="text-yellow-500 text-xl">★</span>
+          {:else}
+            <span title="Not Starred" class="text-yellow-500 text-xl">☆</span>
+          {/if}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 bg-white rounded-lg p-6 text-sm shadow-sm whitespace-pre-line text-gray-800 ml-[3.5rem]">
       {#if mailData?.body}
         {mailData.body}
       {:else}
@@ -117,7 +132,7 @@
       {/if}
     </div>
 
-   <div class="mt-6 flex justify-end">
+    <div class="mt-4 flex justify-end ml-[3.5rem]">
       <button
         on:click={handleReply}
         class="px-5 py-2 rounded-full font-medium transition bg-blue-600 text-white hover:bg-blue-700 shadow-md flex items-center gap-2"
@@ -125,7 +140,7 @@
         Reply →
       </button>
     </div>
-
+    
 
     {#if showReplyModal && mailData}
       <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">

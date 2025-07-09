@@ -3,7 +3,8 @@
   import { showLoader, hideLoader } from '$lib/store/loader-store';
   import { goto } from '$app/navigation';
   import { mailsStore } from '$lib/store/mails-store';
-
+  import { profileStore } from '$lib/store/profile-store';
+  import { generateImageSrc } from '$lib/utils/helpers';
   const dispatch = createEventDispatcher();
 
   export let to = "";
@@ -12,6 +13,9 @@
   export let minimized = false;
   export let isReply = false;
   export let parentMailId = []; 
+  let toUserProfile = null;
+  let profileError = null;
+
 
   let attachmentFile = null;
   let attachmentBlob = null;
@@ -99,12 +103,41 @@
       reader.readAsDataURL(blob);
     });
   }
+
+  async function fetchToUserProfile() {
+    try {
+      if (!to.trim()) return;
+      const profile = await profileStore.getProfileByUserAddress(to.trim());
+      if (profile?.ok) {
+        // console.log('Fetched profile:', profile.ok);
+        toUserProfile = profile.ok;
+        profileError = '';
+      } else {
+        profileError = 'not-registered';
+        toUserProfile = null;
+      }
+    } catch (err) {
+      profileError = 'Error fetching profile';
+      toUserProfile = null;
+      console.error(err);
+    }
+  }
+
+  let debounceTimeout;
+  $: if (to && to.includes('@')) {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      fetchToUserProfile();
+    }, 500);
+  }
+
+
 </script>
 
 <div class="flex flex-col rounded-lg shadow-lg overflow-hidden w-full max-w-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
   <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
     <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
-      {isReply ? 'Reply' : 'New Message'}
+      {isReply ? 'Reply' : 'New Mail'}
     </h2>
     <div class="flex space-x-2">
       <button
@@ -129,18 +162,55 @@
           Error: {error.message}
         </div>
       {/if}
+      
+    <div class="space-y-1 w-full">
+      <label for="to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
 
-      <div class="space-y-1">
-        <label for="to" class="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
-        <input
-          id="to"
-          type="email"
-          bind:value={to}
-          placeholder="recipient@example.com"
-          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
-          required
-        />
+      <div class="relative">
+        {#if toUserProfile}
+          <div
+            class="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100"
+          >
+            {#if toUserProfile.profileImage}
+              <img
+                src={generateImageSrc(toUserProfile.profileImage)}
+                alt="User Avatar"
+                class="w-8 h-8 rounded-full object-cover"
+              />
+            {/if}
+            <div class="flex flex-col">
+              <span class="font-medium">{toUserProfile.name} {toUserProfile.surname}</span>
+              <span class="text-xs text-gray-500 lowercase">&lt;{to}&gt;</span>
+            </div>
+            <button
+              class="ml-auto text-gray-500 hover:text-red-500 text-xs"
+              on:click={() => { toUserProfile = null; to = '' }}
+              title="Clear"
+            >
+              ✕
+            </button>
+          </div>
+        {:else}
+          <input
+            id="to"
+            type="email"
+            bind:value={to}
+            placeholder="recipient@example.com"
+            on:blur={fetchToUserProfile}
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            required
+          />
+        {/if}
       </div>
+
+      {#if profileError}
+        <div class="text-sm text-red-500 mt-1">
+          ⚠️ {profileError === 'not-registered' 
+            ? 'This email is not registered with our service.' 
+            : profileError}
+        </div>
+      {/if}
+    </div>
 
       <div class="space-y-1">
         <label for="subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>

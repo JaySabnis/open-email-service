@@ -30,7 +30,7 @@
       showSidebar = !!profile;
       return profile;
     } catch (err) {
-      console.error("Profile fetch failed:", err);
+      console.error("Profile fetch failed:", JSON.stringify(err));
       profile = null;
       showSidebar = false;
       return null;
@@ -92,8 +92,8 @@
 {#if !initialized}
   <div class="min-h-screen"></div>
 {:else if showLogin}
-  <div class="min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md space-y-8">
+  <div class="min-h-screen flex items-center justify-center w-full">
+    <div class="w-full">
       <LoginPage />
     </div>
   </div>

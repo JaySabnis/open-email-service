@@ -27,6 +27,8 @@
   let currentColors;
   let showSuccess = false;
   let submitting = false;
+  let fullAddress = "";
+  const suffix = "@icp";
 
   const unsubscribeTheme = theme.subscribe(value => {
     currentTheme = value;
@@ -160,19 +162,34 @@
   });
 
   function onAddressInput(event) {
-    userAddress = event.target.value;
+    const raw = event.target.value;
+    userAddress = raw.replace(/\s/g, ''); 
     addressValid = null;
     addressError = '';
+    fullAddress = '';
+
     clearTimeout(addressTimer);
     addressTimer = setTimeout(validateAddress, 500);
   }
 
+  function validateFormat(value) {
+    return /^[a-zA-Z0-9._]+$/.test(value);
+  }
+
   async function validateAddress() {
     if (!userAddress.trim()) return;
+
+    if (!validateFormat(userAddress)) {
+      addressValid = false;
+      addressError = "Invalid format: Only letters, numbers, '.', and '_' allowed";
+      return;
+    }
+
     try {
-      const userAddressAvailable = await profileStore.isUserAddressAvailable(userAddress);
+      const userAddressAvailable = await profileStore.isUserAddressAvailable(userAddress + suffix);
       addressValid = userAddressAvailable;
       addressError = userAddressAvailable ? '' : 'Address not available';
+      fullAddress = userAddress + suffix;
     } catch (err) {
       addressValid = false;
       addressError = 'Validation error';
@@ -355,20 +372,24 @@
             disabled={profile}
             on:input={onAddressInput}
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent
-                   focus:outline-none focus:ring-2 pr-10 disabled:opacity-70 disabled:cursor-not-allowed transition"
+                  focus:outline-none focus:ring-2 pr-16 disabled:opacity-70 disabled:cursor-not-allowed transition"
             style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
+                  color: {currentColors.color};
+                  border: 1px solid {currentColors.inputBorder};"
           />
+
+          {#if !profile}
+            <div class="absolute inset-y-0 right-10 flex items-center text-gray-400 pointer-events-none text-lg font-medium">
+              @icp
+            </div>
+          {/if}
+
           <label
             for="address"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
-                   peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
-                   peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
+                  peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
+                  peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
+            style="color: {currentColors.colorMuted};"
           >
             Address
           </label>
@@ -381,6 +402,12 @@
           </div>
           {#if addressError}
             <p class="text-red-600 text-sm mt-1">{addressError}</p>
+          {/if}
+
+          {#if addressValid && fullAddress}
+            <p class="text-green-600 text-sm mt-1">
+              Address preview: <strong>{fullAddress}</strong>
+            </p>
           {/if}
         </div>
 
