@@ -1,18 +1,13 @@
 import { writable } from 'svelte/store';
 
-const initialTheme = typeof window !== 'undefined' 
-  ? localStorage.getItem('theme') || 'light' 
-  : 'light';
+export const theme = writable('light');
 
-export const theme = writable(initialTheme);
+if (typeof window !== 'undefined') {
+  const saved = localStorage.getItem('theme');
+  if (saved) theme.set(saved);
 
-theme.subscribe((value) => {
-  if (typeof window !== 'undefined') {
+  theme.subscribe((value) => {
     localStorage.setItem('theme', value);
-    if (value === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }
-});
+    document.documentElement.classList.toggle('dark', value === 'dark');
+  });
+}

@@ -220,28 +220,37 @@
 
 {#if showSuccess}
   <div class="text-center py-8">
-    <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-green-100 text-green-500">
+    <div class="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-full"
+         class:bg-green-100={currentTheme === 'light'}
+         class:bg-green-900={currentTheme === 'dark'}
+         class:text-green-500={currentTheme === 'light'}
+         class:text-green-400={currentTheme === 'dark'}>
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
       </svg>
     </div>
-    <h3 class="text-lg font-medium" style="color: {currentColors.headingColor}">
+    <h3 class="text-lg font-medium"
+        class:text-gray-900={currentTheme === 'light'}
+        class:text-gray-100={currentTheme === 'dark'}>
       {profile ? 'Profile updated successfully!' : 'Profile created successfully!'}
     </h3>
   </div>
 {:else}
   {#if profile && !isEditMode}
-    <div class="relative max-w-3xl mx-auto rounded-lg mt-10 p-6 flex flex-col sm:flex-row items-center sm:items-start space-y-6 sm:space-y-0 sm:space-x-8" 
-         style="background-color: {currentColors.cardBg}; 
-                color: {currentColors.color};
-                border: 1px solid {currentColors.borderColor};
-                box-shadow: {currentColors.shadowLight}">
+    <div class="relative max-w-3xl mx-auto rounded-lg mt-10 p-6 flex flex-col sm:flex-row items-center sm:items-start space-y-6 sm:space-y-0 sm:space-x-8"
+         class:bg-white={currentTheme === 'light'}
+         class:bg-gray-800={currentTheme === 'dark'}
+         class:border-gray-200={currentTheme === 'light'}
+         class:border-gray-700={currentTheme === 'dark'}
+         class:shadow={currentTheme === 'light'}
+         class:shadow-lg={currentTheme === 'dark'}>
       
       <button
         on:click={() => isEditMode = true}
         aria-label="Edit Profile"
         class="absolute top-4 right-4 p-1 rounded-full hover:bg-opacity-20 transition"
-        style="color: {currentColors.colorMuted}; background-color: {currentTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}"
+        class:hover:bg-gray-200={currentTheme === 'light'}
+        class:hover:bg-gray-700={currentTheme === 'dark'}
         title="Edit Profile"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -255,47 +264,71 @@
             src={generateImageSrc(profileImageUrl)} 
             alt="Profile Image" 
             class="w-28 h-28 rounded-full object-cover border-4 shadow-sm"
-            style="border-color: {currentColors.accent}"
-          />
+            class:border-blue-500={currentTheme === 'light'}
+            class:border-blue-600={currentTheme === 'dark'}/>
         </div>
       {/if}
 
       <div class="flex-grow w-full grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
         <div>
-          <p class="text-xs uppercase font-semibold" style="color: {currentColors.colorMuted}">First Name</p>
-          <p class="text-lg font-semibold" style="color: {currentColors.color}">{profile?.name || '-'}</p>
+          <p class="text-xs uppercase font-semibold"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-400={currentTheme === 'dark'}>First Name</p>
+          <p class="text-lg font-semibold"
+             class:text-gray-900={currentTheme === 'light'}
+             class:text-gray-100={currentTheme === 'dark'}>{profile?.name || '-'}</p>
         </div>
 
         <div>
-          <p class="text-xs uppercase font-semibold" style="color: {currentColors.colorMuted}">Last Name</p>
-          <p class="text-lg font-semibold" style="color: {currentColors.color}">{profile?.surname || '-'}</p>
+          <p class="text-xs uppercase font-semibold"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-400={currentTheme === 'dark'}>Last Name</p>
+          <p class="text-lg font-semibold"
+             class:text-gray-900={currentTheme === 'light'}
+             class:text-gray-100={currentTheme === 'dark'}>{profile?.surname || '-'}</p>
         </div>
 
         <div>
-          <p class="text-xs uppercase font-semibold" style="color: {currentColors.colorMuted}">Address</p>
-          <p class="text-lg font-medium" style="color: {currentColors.color}">{profile?.userAddress || '-'}</p>
+          <p class="text-xs uppercase font-semibold"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-400={currentTheme === 'dark'}>Address</p>
+          <p class="text-lg font-medium"
+             class:text-gray-900={currentTheme === 'light'}
+             class:text-gray-100={currentTheme === 'dark'}>{profile?.userAddress || '-'}</p>
         </div>
 
         <div>
-          <p class="text-xs uppercase font-semibold" style="color: {currentColors.colorMuted}">Status</p>
-          <p class="text-lg font-medium" style="color: {currentColors.color}">{profile?.status || '-'}</p>
+          <p class="text-xs uppercase font-semibold"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-400={currentTheme === 'dark'}>Status</p>
+          <p class="text-lg font-medium"
+             class:text-gray-900={currentTheme === 'light'}
+             class:text-gray-100={currentTheme === 'dark'}>{profile?.status || '-'}</p>
         </div>
 
         <div class="col-span-1 sm:col-span-2">
-          <p class="text-xs uppercase font-semibold" style="color: {currentColors.colorMuted}">Description</p>
-          <p class="text-md" style="color: {currentColors.color}">{profile?.description || '-'}</p>
+          <p class="text-xs uppercase font-semibold"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-400={currentTheme === 'dark'}>Description</p>
+          <p class="text-md"
+             class:text-gray-900={currentTheme === 'light'}
+             class:text-gray-100={currentTheme === 'dark'}>{profile?.description || '-'}</p>
         </div>
       </div>
     </div>
 
   {:else}
-    <div class="max-w-3xl mx-auto rounded-lg mt-10 p-6" 
-         style="background-color: {currentColors.cardBg}; 
-                color: {currentColors.color};
-                border: 1px solid {currentColors.borderColor};
-                box-shadow: {currentColors.shadowLight}">
+    <div class="max-w-3xl mx-auto rounded-lg mt-10 p-6"
+         class:bg-white={currentTheme === 'light'}
+         class:bg-gray-800={currentTheme === 'dark'}
+         class:border-gray-200={currentTheme === 'light'}
+         class:border-gray-700={currentTheme === 'dark'}
+         class:shadow={currentTheme === 'light'}
+         class:shadow-lg={currentTheme === 'dark'}>
       
-      <h1 class="text-2xl font-semibold mb-6 text-center" style="color: {currentColors.headingColor}">
+      <h1 class="text-2xl font-semibold mb-6 text-center"
+          class:text-gray-900={currentTheme === 'light'}
+          class:text-gray-100={currentTheme === 'dark'}>
         {profile ? 'Update Profile' : 'Create Profile'}
       </h1>
 
@@ -306,8 +339,8 @@
               src={profileImageBlob ? generateImageSrc(profileImageBlob) : generateImageSrc(profileImageUrl)} 
               alt="Profile Preview" 
               class="w-32 h-32 rounded-full object-cover border-2"
-              style="border-color: {currentColors.borderColor}"
-            />
+              class:border-gray-200={currentTheme === 'light'}
+              class:border-gray-700={currentTheme === 'dark'}/>
           </div>
         {/if}
 
@@ -319,20 +352,21 @@
             placeholder=" "
             required
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
-            style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
-          />
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}/>
           <label
             for="name"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                    peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                    peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             First Name
           </label>
         </div>
@@ -345,20 +379,21 @@
             placeholder=" "
             required
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
-            style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
-          />
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}/>
           <label
             for="surname"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                    peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                    peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             Last Name
           </label>
         </div>
@@ -373,13 +408,19 @@
             on:input={onAddressInput}
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent
                   focus:outline-none focus:ring-2 pr-16 disabled:opacity-70 disabled:cursor-not-allowed transition"
-            style="background-color: {currentColors.inputBg}; 
-                  color: {currentColors.color};
-                  border: 1px solid {currentColors.inputBorder};"
-          />
-
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}/>
+            
           {#if !profile}
-            <div class="absolute inset-y-0 right-10 flex items-center text-gray-400 pointer-events-none text-lg font-medium">
+            <div class="absolute inset-y-0 right-10 flex items-center pointer-events-none text-lg font-medium"
+                 class:text-gray-400={currentTheme === 'light'}
+                 class:text-gray-500={currentTheme === 'dark'}>
               @icp
             </div>
           {/if}
@@ -389,8 +430,8 @@
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                   peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                   peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             Address
           </label>
           <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
@@ -419,20 +460,21 @@
             on:change={handleImageUpload}
             placeholder=" "
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
-            style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
-          />
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}/>
           <label
             for="profileImage"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                    peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                    peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             Profile Image
           </label>
         </div>
@@ -444,20 +486,21 @@
             bind:value={status}
             placeholder=" "
             class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
-            style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
-          />
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}/>
           <label
             for="status"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                    peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                    peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             Status
           </label>
         </div>
@@ -468,71 +511,74 @@
             rows="3"
             bind:value={description}
             placeholder=" "
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent resize-none focus:outline-none focus:ring-2 transition" 
-            style="background-color: {currentColors.inputBg}; 
-                   color: {currentColors.color};
-                   border: 1px solid {currentColors.inputBorder};
-                   focus: {currentColors.inputFocus}"
-          ></textarea>
+            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent resize-none focus:outline-none focus:ring-2 transition"
+            class:bg-white={currentTheme === 'light'}
+            class:bg-gray-700={currentTheme === 'dark'}
+            class:text-gray-900={currentTheme === 'light'}
+            class:text-gray-100={currentTheme === 'dark'}
+            class:border-gray-300={currentTheme === 'light'}
+            class:border-gray-600={currentTheme === 'dark'}
+            class:focus:ring-blue-500={true}
+            class:focus:border-blue-500={true}></textarea>
           <label
             for="description"
             class="absolute left-4 top-2 text-sm pointer-events-none transition-all duration-200 origin-left
                    peer-placeholder-shown:top-5 peer-placeholder-shown:text-base peer-placeholder-shown:font-normal
                    peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
-            style="color: {currentColors.colorMuted};
-                   peer-focus: {currentColors.inputFocus};
-                   peer-placeholder-shown: {currentColors.colorMuted}"
-          >
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             Description
           </label>
         </div>
+        
         <div class="flex flex-row items-center space-x-4 justify-center">
-        <div class="text-center space-x-4">
-         <button 
-          type="submit" 
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-        >
-          {profile ? 'Update' : 'Save'} Profile
-        </button>         
-
-          {#if profile}
+          <div class="text-center space-x-4">
             <button 
-              type="button" 
-              on:click={() => isEditMode = false} 
-              class="px-4 py-2 rounded-md font-medium transition"
-              style="background-color: {currentColors.btnSecondary}; 
-                    color: {currentColors.color};
-                    border: 1px solid {currentColors.borderColor}"
-            >
-              Cancel
-            </button>
-          {/if}
+              type="submit" 
+              class="px-4 py-2 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+              class:bg-blue-600={true}
+              class:hover:bg-blue-700={true}
+              class:text-white={true}
+              class:focus:ring-blue-500={true}>
+              {profile ? 'Update' : 'Save'} Profile
+            </button>         
 
-          {#if !profile}
-            <button 
-              type="button" 
-              on:click={logout}
-              class="px-5 py-2 rounded-md font-medium transition"
-              style="background-color: {currentColors.btnSecondary}; 
-                    color: {currentColors.color};
-                    border: 1px solid {currentColors.borderColor}"
-            >
-              Logout
-            </button>
-          {/if}
+            {#if profile}
+              <button 
+                type="button" 
+                on:click={() => isEditMode = false} 
+                class="px-4 py-2 rounded-md font-medium transition"
+                class:bg-white={currentTheme === 'light'}
+                class:bg-gray-700={currentTheme === 'dark'}
+                class:text-gray-700={currentTheme === 'light'}
+                class:text-gray-300={currentTheme === 'dark'}
+                class:border-gray-300={currentTheme === 'light'}
+                class:border-gray-600={currentTheme === 'dark'}
+                class:hover:bg-gray-50={currentTheme === 'light'}
+                class:hover:bg-gray-600={currentTheme === 'dark'}>
+                Cancel
+              </button>
+            {/if}
+
+            {#if !profile}
+              <button 
+                type="button" 
+                on:click={logout}
+                class="px-5 py-2 rounded-md font-medium transition"
+                class:bg-white={currentTheme === 'light'}
+                class:bg-gray-700={currentTheme === 'dark'}
+                class:text-gray-700={currentTheme === 'light'}
+                class:text-gray-300={currentTheme === 'dark'}
+                class:border-gray-300={currentTheme === 'light'}
+                class:border-gray-600={currentTheme === 'dark'}
+                class:hover:bg-gray-50={currentTheme === 'light'}
+                class:hover:bg-gray-600={currentTheme === 'dark'}>
+                Logout
+              </button>
+            {/if}
+          </div>
         </div>
       </form>
     </div>
   {/if}
 {/if}
-
-<style>
-  .submit-btn {
-    background-color: var(--btn-bg);
-    color: var(--btn-text);
-    transition: background-color 0.2s ease;
-  }
-  .submit-btn:hover {
-    background-color: var(--btn-hover);
-  }
-</style>

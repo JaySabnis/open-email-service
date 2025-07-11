@@ -7,6 +7,7 @@
   import Pagination from "$lib/utils/Pagination.svelte";
   import { page } from '$app/stores';
   import { authStore } from '$lib/store/auth-store'; 
+  import { theme } from "$lib/store/theme";
 
   const dispatch = createEventDispatcher();
   export let selectedMessage;
@@ -16,12 +17,11 @@
   let pageSize = 10;
   let totalInboxMails = 0;
   let hasNextPage = false;
-  let currentTheme;
   let currentColors;
   let isSentPage = false;
   let error = null;
   let filteredMails = [];
-
+  let currentTheme = get(theme);
 
  function selectMessage(msg) {
     if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
@@ -102,11 +102,19 @@
   pageNumber = 1;
   }
 
+  theme.subscribe((value) => {
+    currentTheme = value;
+  });
 
 </script>
 
-<div class="space-y-4 p-6 overflow-y-auto h-screen bg-white">
-  <h2 class="text-2xl font-semibold mb-6 text-gray-800">
+<div class="space-y-4 p-6 overflow-y-auto h-screen"
+     class:bg-white={currentTheme === 'light'}
+     class:bg-gray-900={currentTheme === 'dark'}>
+  
+  <h2 class="text-2xl font-semibold mb-6"
+      class:text-gray-800={currentTheme === 'light'}
+      class:text-gray-200={currentTheme === 'dark'}>
     {isSentPage ? "Sent Mails" : "Inbox Mails"}
   </h2>
 
@@ -114,7 +122,13 @@
     type="text"
     placeholder="Search by subject..."
     bind:value={searchTerm}
-    class="w-full mb-6 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+    class="w-full mb-6 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+    class:bg-white={currentTheme === 'light'}
+    class:bg-gray-700={currentTheme === 'dark'}
+    class:text-gray-800={currentTheme === 'light'}
+    class:text-gray-200={currentTheme === 'dark'}
+    class:border-gray-300={currentTheme === 'light'}
+    class:border-gray-600={currentTheme === 'dark'}
   />
 
   {#if error}
@@ -122,45 +136,61 @@
       Error loading messages: {error.message}
     </div>
   {:else if filteredMails.length > 0}
-   <div class="space-y-4">
-  {#each filteredMails as msg, i}
-    <div
-      class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-5 flex justify-between items-center group"
-      class:bg-blue-50={selectedMessage?.id === msg.id}
-      on:click={() => selectMessage(msg)}
-    >
-      <div class="flex-1 min-w-0">
-        <p class="text-base font-medium text-gray-800 truncate group-hover:text-blue-600">
-          {isSentPage ? (msg?.to || `Recipient ${i + 1}`) : (msg?.from || `Sender ${i + 1}`)}
-        </p>
-        <p class="text-sm text-gray-600 truncate">
-          {msg?.subject || 'No Subject'}
-        </p>
-      </div>
+    <div class="space-y-4">
+      {#each filteredMails as msg, i}
+        <div
+          class="border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-5 flex justify-between items-center group"
+          class:bg-white={currentTheme === 'light' && selectedMessage?.id !== msg.id}
+          class:bg-gray-800={currentTheme === 'dark' && selectedMessage?.id !== msg.id}
+          class:bg-blue-50={currentTheme === 'light' && selectedMessage?.id === msg.id}
+          class:bg-blue-900={currentTheme === 'dark' && selectedMessage?.id === msg.id}
+          class:border-gray-200={currentTheme === 'light'}
+          class:border-gray-700={currentTheme === 'dark'}
+          on:click={() => selectMessage(msg)}
+        >
+          <div class="flex-1 min-w-0">
+            <p class="text-base font-medium truncate group-hover:text-blue-600"
+               class:text-gray-800={currentTheme === 'light'}
+               class:text-gray-200={currentTheme === 'dark'}>
+              {isSentPage ? (msg?.to || `Recipient ${i + 1}`) : (msg?.from || `Sender ${i + 1}`)}
+            </p>
+            <p class="text-sm truncate"
+               class:text-gray-600={currentTheme === 'light'}
+               class:text-gray-400={currentTheme === 'dark'}>
+              {msg?.subject || 'No Subject'}
+            </p>
+          </div>
 
-      <div class="flex flex-col items-end gap-2">
-        <div on:click|stopPropagation={() => markAsImportant(msg.id)} class="cursor-pointer text-yellow-500">
-          {#if msg.starred}
-            ★
-          {:else}
-            ☆
-          {/if}
+          <div class="flex flex-col items-end gap-2">
+            <div on:click|stopPropagation={() => markAsImportant(msg.id)} 
+                 class="cursor-pointer text-yellow-500">
+              {#if msg.starred}
+                ★
+              {:else}
+                ☆
+              {/if}
+            </div>
+
+            <span class="text-sm pl-6 shrink-0 whitespace-nowrap"
+                  class:text-gray-500={currentTheme === 'light'}
+                  class:text-gray-400={currentTheme === 'dark'}>
+              {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleString()}
+            </span>
+          </div>
         </div>
+      {/each}
 
-        <span class="text-sm text-gray-500 pl-6 shrink-0 whitespace-nowrap">
-          {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleString()}
-        </span>
-      </div>
-    </div>
-  {/each}
-
-  <Pagination
-    currentPage={pageNumber}
-    {hasNextPage}
-    onPageChange={handlePageChange}
-  />
+      <Pagination
+        currentPage={pageNumber}
+        {hasNextPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   {:else}
-    <p class="text-gray-500 text-center">No mails to show.</p>
+    <p class="text-center"
+       class:text-gray-500={currentTheme === 'light'}
+       class:text-gray-400={currentTheme === 'dark'}>
+      No mails to show.
+    </p>
   {/if}
 </div>
