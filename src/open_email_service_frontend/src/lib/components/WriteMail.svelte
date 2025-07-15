@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher,onMount, onDestroy } from "svelte";
   import { showLoader, hideLoader } from '$lib/store/loader-store';
   import { goto } from '$app/navigation';
   import { mailsStore } from '$lib/store/mails-store';
@@ -7,6 +7,13 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import { theme } from '$lib/store/theme';
   import { get } from 'svelte/store';
+  import { Editor } from '@tiptap/core';
+  import StarterKit from '@tiptap/starter-kit';
+  import Image from '@tiptap/extension-image';
+  import Link from '@tiptap/extension-link';
+  import Underline from '@tiptap/extension-underline';
+  import TextStyle from '@tiptap/extension-text-style';
+  import Color from '@tiptap/extension-color';
   const dispatch = createEventDispatcher();
 
   export let to = "";
@@ -17,8 +24,8 @@
   export let parentMailId = []; 
   let toUserProfile = null;
   let profileError = null;
-
-
+  let editor;
+  let editorRef;
   let attachmentFile = null;
   let attachmentBlob = null;
   let error = null;
@@ -137,6 +144,75 @@
   theme.subscribe((value) => {
   currentTheme = value;
 });
+
+  onMount(() => {
+    editor = new Editor({
+      element: editorRef,
+      extensions: [
+        StarterKit,
+        Underline,
+        TextStyle,
+        Color,
+        Image,
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline',
+            rel: 'noopener noreferrer',
+            target: '_blank'
+          }
+        }),
+      ],
+      content: message,
+      onUpdate: () => {
+        message = editor.getHTML();
+      },
+    });
+
+    return () => {
+      editor.destroy();
+    };
+  });
+
+  onDestroy(() => {
+    if (editor) {
+      editor.destroy();
+    }
+  });
+
+  function addImage() {
+    const url = prompt('Enter the URL of the image:');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }
+
+  function addLink() {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = prompt('Enter the URL:', previousUrl);
+
+    if (url === null) return;
+
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange('link')
+      .setLink({ href: url })
+      .run();
+  }
+
+  function toggleList(listType) {
+    if (listType === 'bullet') {
+      editor.chain().focus().toggleBulletList().run();
+    } else {
+      editor.chain().focus().toggleOrderedList().run();
+    }
+  }
 </script>
 
 <div class="flex flex-col rounded-lg shadow-lg overflow-hidden w-full max-w-md transition-all duration-300"
@@ -281,14 +357,106 @@
                class:text-gray-300={currentTheme === 'dark'}>
           Message
         </label>
-        <textarea
-          bind:value={message}
-          placeholder="Write your message here..."
-          rows="8"
-          class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                {currentTheme === 'light' ? 'light bg-white text-gray-800 border-gray-300' : ''}
-                {currentTheme === 'dark' ? 'dark bg-gray-700 text-gray-100 border-gray-600' : ''}"
-          required></textarea>
+        
+       <div class="flex flex-wrap gap-1 p-1 border rounded-t-md"
+     class:bg-gray-50={currentTheme === 'light'}
+     class:bg-gray-700={currentTheme === 'dark'}
+     class:border-gray-300={currentTheme === 'light'}
+     class:border-gray-600={currentTheme === 'dark'}>
+
+  <button type="button" on:click={() => editor.chain().focus().toggleBold().run()}
+          class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          class:bg-gray-200={editor?.isActive('bold') && currentTheme === 'light'}
+          class:bg-gray-600={editor?.isActive('bold') && currentTheme === 'dark'}
+          title="Bold">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h16M7 12h10M4 18h12" />
+    </svg>
+  </button>
+
+  <button type="button" on:click={() => editor.chain().focus().toggleItalic().run()}
+          class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          class:bg-gray-200={editor?.isActive('italic') && currentTheme === 'light'}
+          class:bg-gray-600={editor?.isActive('italic') && currentTheme === 'dark'}
+          title="Italic">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+    </svg>
+  </button>
+
+  <button type="button" on:click={() => editor.chain().focus().toggleUnderline().run()}
+          class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          class:bg-gray-200={editor?.isActive('underline') && currentTheme === 'light'}
+          class:bg-gray-600={editor?.isActive('underline') && currentTheme === 'dark'}
+          title="Underline">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19h14M5 5h14v6a6 6 0 01-12 0V5z" />
+    </svg>
+  </button>
+
+  <div class="border-l h-6 mx-1"
+       class:border-gray-300={currentTheme === 'light'}
+       class:border-gray-600={currentTheme === 'dark'}></div>
+
+  <button type="button" on:click={() => toggleList('bullet')}
+          class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          class:bg-gray-200={editor?.isActive('bulletList') && currentTheme === 'light'}
+          class:bg-gray-600={editor?.isActive('bulletList') && currentTheme === 'dark'}
+          title="Bullet List">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      <circle cx="4" cy="7" r="1" />
+      <circle cx="4" cy="12" r="1" />
+      <circle cx="4" cy="17" r="1" />
+    </svg>
+  </button>
+
+  <button type="button" on:click={() => toggleList('ordered')}
+          class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+          class:bg-gray-200={editor?.isActive('orderedList') && currentTheme === 'light'}
+          class:bg-gray-600={editor?.isActive('orderedList') && currentTheme === 'dark'}
+          title="Numbered List">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      <path d="M4 7h1v1H4zM4 12h1v1H4zM4 17h1v1H4z" />
+      <path d="M4 8h1v1H4zM4 13h1v1H4zM4 18h1v1H4z" />
+    </svg>
+  </button>
+
+  <div class="border-l h-6 mx-1"
+       class:border-gray-300={currentTheme === 'light'}
+       class:border-gray-600={currentTheme === 'dark'}></div>
+
+      <button type="button" on:click={addLink}
+              class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+              class:bg-gray-200={editor?.isActive('link') && currentTheme === 'light'}
+              class:bg-gray-600={editor?.isActive('link') && currentTheme === 'dark'}
+              title="Insert Link">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+      </button>
+
+      <button type="button" on:click={addImage}
+              class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+              title="Insert Image">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </button>
+    </div>
+
+        <div bind:this={editorRef}
+             class="w-full px-3 py-2 border border-t-0 rounded-b-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[200px] prose max-w-none"
+             class:bg-white={currentTheme === 'light'}
+             class:text-gray-800={currentTheme === 'light'}
+             class:border-gray-300={currentTheme === 'light'}
+             class:bg-gray-700={currentTheme === 'dark'}
+             class:text-gray-100={currentTheme === 'dark'}
+             class:border-gray-600={currentTheme === 'dark'}
+             class:prose-invert={currentTheme === 'dark'}
+             placeholder="Write your message here...">
+        </div>
       </div>
 
       <div class="space-y-1">

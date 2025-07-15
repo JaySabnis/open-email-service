@@ -3,6 +3,16 @@
   import NewSidebar from "$lib/components/NewSidebar.svelte";
   import WriteMail from "$lib/components/WriteMail.svelte";
   import { showWriteMail, closeWriteMail } from '$lib/store/ui';
+  import { navigating } from '$app/stores';
+  import { onDestroy } from 'svelte';
+
+  const unsubscribe = navigating.subscribe(($navigating) => {
+    if ($navigating) {
+      closeWriteMail();
+    }
+  });
+
+  onDestroy(unsubscribe);
 </script>
 
 <div class="w-full">

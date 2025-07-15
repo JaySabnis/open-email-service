@@ -6,6 +6,8 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import { theme } from '$lib/store/theme'; 
   import { get } from 'svelte/store';
+  import { faPlus, faInbox, faPaperPlane, faSignOutAlt } from '@fortawesome/free-solid-svg-icons'
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   export let profile;
 
   let currentTheme = get(theme); 
@@ -64,26 +66,33 @@
 
     <nav class="p-4 space-y-2">
       <button
-        class="flex items-center gap-2 w-full p-2 rounded text-left focus:outline-none transition-colors hover:bg-opacity-20"
+        class="flex items-center gap-3 w-full p-2 rounded text-left focus:outline-none transition-colors hover:bg-opacity-20"
         class:hover:bg-gray-700={currentTheme === 'dark'}
         class:hover:bg-gray-100={currentTheme === 'light'}
         on:click={handleWriteClick}
         aria-label="Write new mail"
       >
-        <span class="text-lg font-bold">+</span> New Mail
+        <FontAwesomeIcon icon={faPlus} class="h-4 w-4" />
+        <span>New Mail</span>
       </button>
 
-      <a href="/home" class="block p-2 rounded transition-colors hover:bg-opacity-20"
+      <a href="/home" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
          class:hover:bg-gray-700={currentTheme === 'dark'}
-         class:hover:bg-gray-100={currentTheme === 'light'}>Inbox</a>
-      <a href="/sent" class="block p-2 rounded transition-colors hover:bg-opacity-20"
+         class:hover:bg-gray-100={currentTheme === 'light'}>
+        <FontAwesomeIcon icon={faInbox} class="h-4 w-4" />
+        <span>Inbox</span>
+      </a>
+      
+      <a href="/sent" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
          class:hover:bg-gray-700={currentTheme === 'dark'}
-         class:hover:bg-gray-100={currentTheme === 'light'}>Sent</a>
+         class:hover:bg-gray-100={currentTheme === 'light'}>
+        <FontAwesomeIcon icon={faPaperPlane} class="h-4 w-4" />
+        <span>Sent</span>
+      </a>
     </nav>
   </div>
 
   <div class="p-4 space-y-4">
-
     <button
       on:click={logout}
       class="w-full py-2 px-4 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors"
@@ -91,10 +100,8 @@
       class:hover:bg-red-700={true}
       class:text-white={true}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-      </svg>
-      Logout
+      <FontAwesomeIcon icon={faSignOutAlt} class="h-4 w-4" />
+      <span>Logout</span>
     </button>
   </div>
 </aside>
