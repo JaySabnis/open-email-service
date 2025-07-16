@@ -15,14 +15,19 @@ module {
         attachmentIds : [Text];
         createdOn : Timestamp;
         isReply : Bool;
-        parentMailId : ?Text;     
+        parentMailId : ?Text;
     };
 
+    public type Thread = {
+        headMailId : Text; // Points to the first message in thread
+        replyMailIds : [Text]; // All replies in this thread
+        isNewMailAdded : Bool;
+    };
 
-    public type Thread={
-        headMailId: Text;       // Points to the first message in thread
-        replyMailIds: [Text];   // All replies in this thread
-        isNewMailAdded:Bool;
+    public type TrashMetaData = {
+        deleteAfter : Timestamp; // Unix timestamp or duration in seconds
+        source : Text;
+        threads:[Text]; // list of ids to be deleted in case of threads.
     };
 
     public type EmailRegistry = {
@@ -30,6 +35,7 @@ module {
         outbox : List.List<Text>;
         important : List.List<Text>;
         openedMails : List.List<Text>;
+        trash: List.List<(Text, TrashMetaData)>;
     };
 
     public type EmailErrors = {
@@ -38,6 +44,7 @@ module {
         #InvalidRecipientAddress;
         #ErrorSelfTransfer;
         #MissingParentId;
+        #UnknownSource;
     };
 
     public type File = {
