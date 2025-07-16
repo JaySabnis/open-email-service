@@ -79,6 +79,11 @@ actor {
     emailManager.deleteEmail(caller, emailId);
   };
 
+  public shared ({ caller }) func restoreEmail(emailId : Text) : async Result.Result<(), EmailTypes.EmailErrors> {
+    assert not Principal.isAnonymous(caller);
+    emailManager.restoreEmail(caller, emailId);
+  };
+
   public shared ({ caller }) func markAsRead(emailId : Text) : async () {
     assert not Principal.isAnonymous(caller);
     emailManager.markAsRead(caller, emailId);
@@ -123,6 +128,11 @@ actor {
   public shared ({ caller }) func fetchStarredMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
     await emailManager.fetchStarredMails(caller, pageNumber, pageSize);
+  };
+
+  public shared ({ caller }) func fetchTrashMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+    assert not Principal.isAnonymous(caller);
+    await emailManager.fetchTrashMails(caller,pageNumber,pageSize);
   };
 
   public func uploadFile(fileData : EmailCommands.FileRequestDTO) : async Result.Result<EmailCommands.FileResponseDTO, EmailTypes.FileErrors> {

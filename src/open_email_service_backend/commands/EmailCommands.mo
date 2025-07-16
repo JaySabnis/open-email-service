@@ -19,7 +19,6 @@ module EmailCommands {
         createdOn : Timestamp;
         isReply : Bool;
         parentMailId : ?Text;
-        //add parent mail id for threading
     };
 
     public type FileResponseDTO = {

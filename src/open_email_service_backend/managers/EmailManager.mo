@@ -90,6 +90,7 @@ module {
                         outbox = if (not isInbox) List.push(mailId, reg.outbox) else reg.outbox;
                         important = reg.important;
                         openedMails = reg.openedMails;
+                        trash = reg.trash;
                     };
                 };
                 case null {
@@ -98,6 +99,8 @@ module {
                         outbox = if (not isInbox) List.push(mailId, List.nil()) else List.nil();
                         important = List.nil();
                         openedMails = List.nil();
+                        trash = List.nil();
+
                     };
                 };
             };
@@ -255,8 +258,7 @@ module {
 
         };
 
-
-         //get list of sent mails
+        //get list of sent mails
         public func fetchStarredMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
 
             //authenticate user when fetching the emails.
@@ -407,6 +409,7 @@ module {
                         outbox = savedRecord.outbox;
                         important = updatedImportantMailsList;
                         openedMails = savedRecord.openedMails;
+                        trash = savedRecord.trash;
                     };
 
                     //add updated records.
@@ -426,6 +429,7 @@ module {
                         outbox = record.outbox;
                         important = List.filter<Text>(record.important, func(id : Text) : Bool { id != emailId });
                         openedMails = record.openedMails;
+                        trash = record.trash;
                     };
                     registry.put(caller, updatedRegistry);
                 };
@@ -451,9 +455,8 @@ module {
 
                     let threadBuffer = Buffer.Buffer<EmailQueries.EmailBodyResponseDTO>(emailThreadIds.size());
 
-                     //get starred email
+                    //get starred email
                     let importantMailsList : List.List<Text> = getImportantMailList(caller);
-
 
                     for (id in emailThreadIds.vals()) {
                         switch (emailStore.get(id)) {
@@ -479,7 +482,7 @@ module {
                                     case (?_) true;
                                     case null false;
                                 };
-                               
+
                                 threadBuffer.add({
                                     id = id;
                                     from = threadEmail.from;
@@ -497,7 +500,7 @@ module {
                     };
 
                     return #ok(Buffer.toArray(threadBuffer));
-                };   
+                };
             };
         };
 
@@ -519,6 +522,7 @@ module {
                         outbox = record.outbox;
                         important = record.important;
                         openedMails = updatedOpened;
+                        trash = record.trash;
                     };
 
                     registry.put(caller, updatedRegistry);
@@ -541,6 +545,7 @@ module {
                         outbox = record.outbox;
                         important = record.important;
                         openedMails = updatedOpened;
+                        trash = record.trash;
                     };
 
                     registry.put(caller, updatedRegistry);
@@ -554,20 +559,147 @@ module {
             switch (registry.get(caller)) {
                 case null return;
                 case (?record) {
-                    let remove = func(list : List.List<Text>) : List.List<Text> {
-                        List.filter<Text>(list, func(id : Text) : Bool { id != emailId });
+                    let currentTime = Time.now();
+                    let tenDaysInNanos : Nat = 10 * 24 * 60 * 60 * 1_000_000_000;
+
+                    var sourceBucket : Text = "unknown";
+
+                    // Only remove from inbox and outbox
+                    let remove = func(list : List.List<Text>, bucket : Text) : (List.List<Text>, Bool) {
+                        var found = false;
+                        let updated = List.filter<Text>(
+                            list,
+                            func(id : Text) : Bool {
+                                if (id == emailId) {
+                                    found := true; // update flag
+                                    false; //return false so that id can be skipped and removed..
+                                } else true;
+                            },
+                        );
+
+                        if (found) sourceBucket := bucket;
+
+                        return (updated, found);
                     };
 
+                    let (inboxList, _) = remove(record.inbox, "inbox");
+                    let (outboxList, _) = remove(record.outbox, "outbox");
+
+                    if (sourceBucket == "unknown") return; // Skip if not in inbox/outbox
+
+                    let threadList : [Text] = switch (threads.get(emailId)) {
+                        case (?thread) thread.replyMailIds;
+                        case null [];
+                    };
+
+                    let trashEntry : T.TrashMetaData = {
+                        deleteAfter = currentTime + tenDaysInNanos;
+                        source = sourceBucket;
+                        threads = threadList;
+                    };
+
+                    let updateTrashList : List.List<(Text, T.TrashMetaData)> = List.append(record.trash, List.make((emailId, trashEntry)));
+
                     let updatedRegistry : T.EmailRegistry = {
-                        inbox = remove(record.inbox);
-                        outbox = remove(record.outbox);
-                        important = remove(record.important);
-                        openedMails = remove(record.openedMails);
+                        inbox = inboxList;
+                        outbox = outboxList;
+                        important = record.important;
+                        openedMails = record.openedMails;
+                        trash = updateTrashList;
                     };
 
                     registry.put(caller, updatedRegistry);
                 };
             };
+        };
+
+        public func restoreEmail(caller : Principal, emailId : Text) : Result.Result<(), T.EmailErrors> {
+            switch (registry.get(caller)) {
+                case null return #err(#AnonymousCaller);
+                case (?record) {
+                    // Search for the trash entry
+                    var foundMeta : ?T.TrashMetaData = null;
+
+                    let filteredTrash = List.filter<(Text, T.TrashMetaData)>(
+                        record.trash,
+                        func(pair : (Text, T.TrashMetaData)) : Bool {
+                            let (id, meta) = pair;
+                            if (id == emailId) {
+                                foundMeta := ?meta;
+                                return false; // filter out (i.e., remove) the matched entry
+                            };
+                            true;
+                        },
+                    );
+
+                    switch (foundMeta) {
+                        case null return #err(#NotFound);
+                        case (?meta) {
+                            var inboxList = record.inbox;
+                            var outboxList = record.outbox;
+
+                            if (meta.source == "inbox") {
+                                inboxList := List.push(emailId, inboxList);
+                            } else if (meta.source == "outbox") {
+                                outboxList := List.push(emailId, outboxList);
+                            } else return #err(#UnknownSource);
+
+                            let updatedRegistry : T.EmailRegistry = {
+                                inbox = inboxList;
+                                outbox = outboxList;
+                                important = record.important;
+                                openedMails = record.openedMails;
+                                trash = filteredTrash;
+                            };
+
+                            registry.put(caller, updatedRegistry);
+                            return #ok();
+                        };
+                    };
+                };
+            };
+        };
+
+        // get list of trash mails
+        public func fetchTrashMails(caller : Principal,pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+
+            let trashList : List.List<(Text, T.TrashMetaData)> = switch (registry.get(caller)) {
+                case (?emailRegistry) emailRegistry.trash;
+                case null List.nil();
+            };
+
+            let totalItems : Nat = List.size(trashList);
+
+            let emails = List.mapFilter<(Text, T.TrashMetaData), EmailQueries.EmailResponseDTO>(
+                trashList,
+                func(pair) {
+                    let (id, _) = pair;
+
+                    switch (emailStore.get(id)) {
+                        case (?email) {
+                            if (not email.isReply) {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
+                                    id = id;
+                                    from = email.from;
+                                    to = email.to;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
+                                    createdOn = email.createdOn;
+                                    starred = false;
+                                    readFlag = false;
+                                };
+
+                                return ?responseEmail;
+                            } else {
+                                return null;
+                            };
+                        };
+                        case null null;
+                    };
+                },
+            );
+
+            return getPaginatedEmails(caller,Option.get(pageNumber, 1),Option.get(pageSize, 10),totalItems,emails,false);
         };
 
         //delete all mails for the caller while deleting the profile.
