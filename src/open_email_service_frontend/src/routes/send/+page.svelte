@@ -1,7 +1,6 @@
 <script>
   import { mailsStore } from "$lib/store/mails-store";
-  import { theme } from '$lib/store/theme.js';
-  import { colors } from '$lib/store/colors.js';
+  import { theme } from '$lib/store/theme';
   import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { showLoader, hideLoader } from '$lib/store/loader-store'; 
@@ -13,25 +12,8 @@
   let attachments = []; 
   let attachmentFile = null;
   let attachmentBlob = null;
-  let currentTheme;
-  let currentColors;
+  let currentTheme = get(theme);
 
-  const unsubscribeTheme = theme.subscribe(value => {
-    currentTheme = value;
-    const colorsValue = get(colors);
-    currentColors = colorsValue[currentTheme];
-    if (typeof window !== "undefined") {
-      if (value === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  });
-
-  onDestroy(() => {
-    unsubscribeTheme();
-  });
 
   async function handleSendMail() {
     try {
@@ -101,7 +83,9 @@
   }
 
 
-  
+  theme.subscribe((value) => {
+    currentTheme = value;
+  });
 </script>
 
 <style>
@@ -121,85 +105,126 @@
 </svelte:head>
 
 
-<div class="max-w-xl mx-auto p-6 mt-10 rounded-lg shadow-lg" style="background-color: {currentColors.cardBg};">
-  <h1 class="text-2xl font-semibold mb-6 text-center" style="color: {currentColors.headingColor};">Send Email</h1>
+<div class="max-w-xl mx-auto p-6 mt-10 rounded-lg shadow-lg"
+     class:bg-white={currentTheme === 'light'}
+     class:bg-gray-800={currentTheme === 'dark'}>
+
+  <h1 class="text-2xl font-semibold mb-6 text-center"
+      class:text-gray-800={currentTheme === 'light'}
+      class:text-gray-200={currentTheme === 'dark'}>
+    Send Email
+  </h1>
 
   <form on:submit|preventDefault={handleSendMail} class="space-y-6">
     <div>
-      <label for="to" class="block text-sm font-medium mb-1" style="color: {currentColors.color};">To</label>
+      <label for="to" class="block text-sm font-medium mb-1"
+             class:text-gray-700={currentTheme === 'light'}
+             class:text-gray-300={currentTheme === 'dark'}>
+        To
+      </label>
       <input
         id="to"
         bind:value={to}
-        class="w-full border px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md"
         placeholder="recipient@example.com"
         required
-        style="
-          border-color: {currentColors.inputBorder};
-          background-color: {currentColors.inputBg};
-          color: {currentColors.color};
-          --input-focus-color: {currentColors.inputFocus};
-        "
+        class:border-gray-300={currentTheme === 'light'}
+        class:border-gray-600={currentTheme === 'dark'}
+        class:bg-white={currentTheme === 'light'}
+        class:bg-gray-700={currentTheme === 'dark'}
+        class:text-gray-800={currentTheme === 'light'}
+        class:text-gray-200={currentTheme === 'dark'}
+        class:focus:ring-blue-500={currentTheme === 'light'}
+        class:focus:ring-blue-400={currentTheme === 'dark'}
+        class:focus:border-blue-500={currentTheme === 'light'}
+        class:focus:border-blue-400={currentTheme === 'dark'}
       />
     </div>
 
     <div>
-      <label for="subject" class="block text-sm font-medium mb-1" style="color: {currentColors.color};">Subject</label>
+      <label for="subject" class="block text-sm font-medium mb-1"
+             class:text-gray-700={currentTheme === 'light'}
+             class:text-gray-300={currentTheme === 'dark'}>
+        Subject
+      </label>
       <input
         id="subject"
         type="text"
         bind:value={subject}
-        class="w-full border px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md"
         placeholder="Email subject"
         required
-        style="
-          border-color: {currentColors.inputBorder};
-          background-color: {currentColors.inputBg};
-          color: {currentColors.color};
-          --input-focus-color: {currentColors.inputFocus};
-        "
+        class:border-gray-300={currentTheme === 'light'}
+        class:border-gray-600={currentTheme === 'dark'}
+        class:bg-white={currentTheme === 'light'}
+        class:bg-gray-700={currentTheme === 'dark'}
+        class:text-gray-800={currentTheme === 'light'}
+        class:text-gray-200={currentTheme === 'dark'}
+        class:focus:ring-blue-500={currentTheme === 'light'}
+        class:focus:ring-blue-400={currentTheme === 'dark'}
+        class:focus:border-blue-500={currentTheme === 'light'}
+        class:focus:border-blue-400={currentTheme === 'dark'}
       />
     </div>
 
     <div>
-      <label for="body" class="block text-sm font-medium mb-1" style="color: {currentColors.color};">Body</label>
+      <label for="body" class="block text-sm font-medium mb-1"
+             class:text-gray-700={currentTheme === 'light'}
+             class:text-gray-300={currentTheme === 'dark'}>
+        Body
+      </label>
       <textarea
         id="body"
         rows="5"
         bind:value={body}
-        class="w-full border px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md"
         placeholder="Write your message here..."
         required
-        style="
-          border-color: {currentColors.inputBorder};
-          background-color: {currentColors.inputBg};
-          color: {currentColors.color};
-          --input-focus-color: {currentColors.inputFocus};
-        "
+        class:border-gray-300={currentTheme === 'light'}
+        class:border-gray-600={currentTheme === 'dark'}
+        class:bg-white={currentTheme === 'light'}
+        class:bg-gray-700={currentTheme === 'dark'}
+        class:text-gray-800={currentTheme === 'light'}
+        class:text-gray-200={currentTheme === 'dark'}
+        class:focus:ring-blue-500={currentTheme === 'light'}
+        class:focus:ring-blue-400={currentTheme === 'dark'}
+        class:focus:border-blue-500={currentTheme === 'light'}
+        class:focus:border-blue-400={currentTheme === 'dark'}
       ></textarea>
     </div>
 
     <div>
-      <label for="attachment" class="block text-sm font-medium mb-1" style="color: {currentColors.color};">Attachment (Optional)</label>
+      <label for="attachment" class="block text-sm font-medium mb-1"
+             class:text-gray-700={currentTheme === 'light'}
+             class:text-gray-300={currentTheme === 'dark'}>
+        Attachment (Optional)
+      </label>
       <input
         id="attachment"
         type="file"
         accept="*/*"
         on:change={handleAttachmentUpload}
-        class="w-full border px-3 py-2 rounded-md"
-        style="
-          border-color: {currentColors.inputBorder};
-          background-color: {currentColors.inputBg};
-          color: {currentColors.color};
-          --input-focus-color: {currentColors.inputFocus};
-        "
+        class="w-full px-3 py-2 rounded-md"
+        class:border-gray-300={currentTheme === 'light'}
+        class:border-gray-600={currentTheme === 'dark'}
+        class:bg-white={currentTheme === 'light'}
+        class:bg-gray-700={currentTheme === 'dark'}
+        class:text-gray-800={currentTheme === 'light'}
+        class:text-gray-200={currentTheme === 'dark'}
       />
     </div>
-
 
     <div class="text-center">
       <button
         type="submit"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+        class="px-4 py-2 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+        class:bg-blue-600={currentTheme === 'light'}
+        class:bg-blue-500={currentTheme === 'dark'}
+        class:hover:bg-blue-700={currentTheme === 'light'}
+        class:hover:bg-blue-600={currentTheme === 'dark'}
+        class:focus:ring-blue-500={currentTheme === 'light'}
+        class:focus:ring-blue-400={currentTheme === 'dark'}
+        class:text-white={true}
       >
         Send Email
       </button>

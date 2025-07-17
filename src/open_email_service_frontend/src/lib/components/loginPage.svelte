@@ -23,24 +23,36 @@
   }
 </script>
 
-<main class="min-h-screen relative flex items-center justify-center bg-white">
-
-  <div class="hidden lg:block absolute inset-0">
-    <!-- <img src="https://miro.medium.com/v2/resize:fit:1400/1*guz0NRDfCNOU5nnfsiEsFw.jpeg" alt="Login Image" class="w-full h-full" /> -->
+<main class="min-h-screen relative flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+  <div class="absolute inset-0 z-0">
+    <img
+      src="/icp-logo.jpg"
+      alt="Background"
+      class="w-full h-full object-cover opacity-30 dark:opacity-10"
+    />
   </div>
 
-  <div class="relative z-10 w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-lg text-center">
-    <h2 class="text-2xl font-semibold mb-6">Welcome to Our Platform</h2>
-    <p class="text-gray-600 mb-6">Please login to continue</p>
+  <div class="relative z-10 w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 md:p-10">
+    <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-4">
+      Welcome to Open Email Services
+    </h2>
+    <p class="text-gray-600 dark:text-gray-400 mb-6">
+      Sign in to access your secure, decentralized inbox.
+    </p>
+
     <button
       on:click={handleLogin}
-      class="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition duration-200"
+      class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg shadow-md transition"
     >
       Login with Internet Identity
     </button>
-  </div>
 
+    <p class="text-xs text-gray-400 mt-6 text-center">
+      By continuing, you agree to our
+      <a href="/#" class="underline hover:text-blue-600">Terms of Service</a>
+      and
+      <a href="/#" class="underline hover:text-blue-600">Privacy Policy</a>.
+    </p>
+  </div>
 </main>
 
-<style>
-</style>

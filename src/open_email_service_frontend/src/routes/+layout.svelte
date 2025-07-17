@@ -9,6 +9,9 @@
   import LoginPage from '$lib/components/loginPage.svelte';
   import GlobalLoader from '$lib/components/GlobalLoader.svelte';
   import { showLoader, hideLoader } from '$lib/store/loader-store';
+  import { get } from "svelte/store";
+  import { theme } from "$lib/store/theme";
+  import Navbar from '$lib/components/Navbar.svelte';
   import '../app.css';
 
   let identity = null;
@@ -16,6 +19,7 @@
   let showSidebar = false;
   let showLogin = false;
   let initialized = false;
+  let currentTheme = get(theme);
 
   async function fetchAndSetProfile() {
     try {
@@ -30,7 +34,7 @@
       showSidebar = !!profile;
       return profile;
     } catch (err) {
-      console.error("Profile fetch failed:", err);
+      console.error("Profile fetch failed:", JSON.stringify(err));
       profile = null;
       showSidebar = false;
       return null;
@@ -87,23 +91,41 @@
       hideLoader(); 
     };
   });
+
+   const setTheme = (value) => {
+    theme.set(value);
+    currentTheme = value;
+  };
+
+   theme.subscribe((value) => {
+    currentTheme = value;
+  });
 </script>
 
 {#if !initialized}
   <div class="min-h-screen"></div>
 {:else if showLogin}
-  <div class="min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md space-y-8">
+  <div class="min-h-screen flex items-center justify-center w-full">
+    <div class="w-full">
       <LoginPage />
     </div>
   </div>
 {:else}
-  <div class="flex">
+  <div class="flex flex-col min-h-screen">
     {#if showSidebar}
-      <Sidebar {profile} />
+      <Sidebar {profile} {currentTheme} {setTheme} />
     {/if}
-    <div class="flex-1 {showSidebar ? 'ml-64' : ''}">
-      <slot />
+    
+    <div class="flex-1 flex flex-col {showSidebar ? 'ml-64' : ''}">
+      <Navbar 
+        {currentTheme} 
+        {setTheme} 
+        showSidebar={showSidebar}
+      />
+      
+      <main class="flex-1 pt-10">
+        <slot />
+      </main>
     </div>
   </div>
 {/if}
