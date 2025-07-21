@@ -90,6 +90,7 @@ module {
                         outbox = if (not isInbox) List.push(mailId, reg.outbox) else reg.outbox;
                         important = reg.important;
                         openedMails = reg.openedMails;
+                        draft = reg.draft;
                         trash = reg.trash;
                     };
                 };
@@ -99,12 +100,121 @@ module {
                         outbox = if (not isInbox) List.push(mailId, List.nil()) else List.nil();
                         important = List.nil();
                         openedMails = List.nil();
+                        draft = List.nil(); //todo check logic , user can save email before sending email.
                         trash = List.nil();
 
                     };
                 };
             };
             registry.put(principalId, newRegistry);
+        };
+
+        public func saveDraft(senderPrincipalId : Principal, mail : EmailCommands.SendEmailDTO) : async Result.Result<(), T.EmailErrors> {
+            // generate new UUID
+            let emailId = await utils.generateUUID();
+
+            // create draft email with empty from/to
+            let draftEmail : T.Email = {
+                from = ""; // do not store sender in draft
+                to = mail.to; 
+                subject = mail.subject;
+                body = mail.body;
+                attachmentIds = mail.attachmentIds;
+                createdOn = Time.now();
+                isReply = mail.isReply;
+                parentMailId = mail.parentMailId;
+            };
+
+            // store in email store
+            emailStore.put(emailId, draftEmail);
+
+            // update registry drafts
+            updateDraftRegistry(senderPrincipalId, emailId);
+
+            return #ok();
+        };
+
+        public func editDraft(emailId : Text, updatedMail : EmailCommands.SendEmailDTO) : async Result.Result<(), T.EmailErrors> {
+            switch (emailStore.get(emailId)) {
+                case (?existingDraft) {
+                    let updatedDraft : T.Email = {
+                        from = "";
+                        to = updatedMail.to;
+                        subject = updatedMail.subject;
+                        body = updatedMail.body;
+                        attachmentIds = updatedMail.attachmentIds;
+                        createdOn = existingDraft.createdOn; // preserve original creation time
+                        isReply = updatedMail.isReply;
+                        parentMailId = updatedMail.parentMailId;
+                    };
+
+                    emailStore.put(emailId, updatedDraft);
+                    return #ok();
+                };
+                case null {
+                    return #err(#NotFound);
+                };
+            };
+        };
+
+        func updateDraftRegistry(principalId : Principal, draftId : Text) {
+            let currentRegistry = registry.get(principalId);
+            let newRegistry : T.EmailRegistry = switch (currentRegistry) {
+                case (?reg) {
+                    {
+                        inbox = reg.inbox;
+                        outbox = reg.outbox;
+                        important = reg.important;
+                        openedMails = reg.openedMails;
+                        draft = List.push(draftId, reg.draft);
+                        trash = reg.trash;
+                    };
+                };
+                case null {
+                    {
+                        inbox = List.nil();
+                        outbox = List.nil();
+                        important = List.nil();
+                        openedMails = List.nil();
+                        draft = List.push(draftId, List.nil()); // create with only the draft
+                        trash = List.nil();
+                    };
+                };
+            };
+            registry.put(principalId, newRegistry);
+        };
+
+        public func deleteFromDrafts(user : Principal, draftId : Text) : async Result.Result<(), T.EmailErrors> {
+            // Remove from emailStore
+            ignore emailStore.remove(draftId);
+
+            // Update user's registry to remove the draftId from their draft list
+            switch (registry.get(user)) {
+                case (?reg) {
+                    let updatedDrafts = List.filter<Text>(
+                        reg.draft,
+                        func(id : Text) : Bool {
+                            id != draftId;
+                        },
+                    );
+
+                    let updatedRegistry : T.EmailRegistry = {
+                        inbox = reg.inbox;
+                        outbox = reg.outbox;
+                        important = reg.important;
+                        openedMails = reg.openedMails;
+                        draft = updatedDrafts;
+                        trash = reg.trash;
+                    };
+
+                    registry.put(user, updatedRegistry);
+                };
+                case null {
+                    return #err(#NotFound);
+                };
+            };
+
+            return #ok(());
         };
 
         // Create a thread of mails
@@ -303,6 +413,51 @@ module {
 
         };
 
+        //todo: create one fuction and reuse the logic of fetch email with type instead of calling seprate fucntion for all 5 different types.
+        public func fetchDraftMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+
+            //authenticate user when fetching the emails.
+            let sentEmailIds : List.List<Text> = switch (registry.get(caller)) {
+                //todo: add logic to only fetch latest mails and not whole list.
+                case (?emailRegistry) emailRegistry.draft;
+                case null List.nil();
+            };
+
+            let totalItems : Nat = List.size(sentEmailIds);
+
+            let emails = List.mapFilter<Text, EmailQueries.EmailResponseDTO>(
+                sentEmailIds,
+                func(id) {
+                    switch (emailStore.get(id)) {
+                        case (?email) {
+                            if (not email.isReply) {
+                                let responseEmail : EmailQueries.EmailResponseDTO = {
+                                    id = id;
+                                    from = email.from;
+                                    to = email.to;
+                                    preview = utils.subText(email.body, 0, 100);
+                                    subject = Option.get(email.subject, noSubject);
+                                    createdOn = email.createdOn;
+                                    starred = false;
+                                    readFlag = false;
+                                };
+
+                                return ?responseEmail;
+                            } else {
+                                return null;
+                            }
+
+                        }; // Extract the email if it exists
+                        case null null; // Skip if the email is null
+                    };
+                },
+            );
+
+            // page number is optional, default pagination(pageNumber=1, pageSize=10)
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, true);
+
+        };
+
         private func getPaginatedEmails(caller : Principal, pageNumber : Nat, pageSize : Nat, totalItemSize : Nat, emails : List.List<EmailQueries.EmailResponseDTO>, isOutboxRequest : Bool) : EmailQueries.PaginatedEmailBodyResponseDTO {
 
             // Safely decrements pageNumber (returns 0 if pageNumber is 0)
@@ -409,6 +564,7 @@ module {
                         outbox = savedRecord.outbox;
                         important = updatedImportantMailsList;
                         openedMails = savedRecord.openedMails;
+                        draft = savedRecord.draft;
                         trash = savedRecord.trash;
                     };
 
@@ -429,6 +585,7 @@ module {
                         outbox = record.outbox;
                         important = List.filter<Text>(record.important, func(id : Text) : Bool { id != emailId });
                         openedMails = record.openedMails;
+                        draft = record.draft;
                         trash = record.trash;
                     };
                     registry.put(caller, updatedRegistry);
@@ -522,6 +679,7 @@ module {
                         outbox = record.outbox;
                         important = record.important;
                         openedMails = updatedOpened;
+                        draft = record.draft;
                         trash = record.trash;
                     };
 
@@ -545,6 +703,7 @@ module {
                         outbox = record.outbox;
                         important = record.important;
                         openedMails = updatedOpened;
+                        draft = record.draft;
                         trash = record.trash;
                     };
 
@@ -584,6 +743,7 @@ module {
 
                     let (inboxList, _) = remove(record.inbox, "inbox");
                     let (outboxList, _) = remove(record.outbox, "outbox");
+                    let (draftList, _) = remove(record.draft, "draft");
 
                     if (sourceBucket == "unknown") return; // Skip if not in inbox/outbox
 
@@ -605,6 +765,7 @@ module {
                         outbox = outboxList;
                         important = record.important;
                         openedMails = record.openedMails;
+                        draft = draftList;
                         trash = updateTrashList;
                     };
 
@@ -637,11 +798,14 @@ module {
                         case (?meta) {
                             var inboxList = record.inbox;
                             var outboxList = record.outbox;
+                            var draftList = record.draft;
 
                             if (meta.source == "inbox") {
                                 inboxList := List.push(emailId, inboxList);
                             } else if (meta.source == "outbox") {
                                 outboxList := List.push(emailId, outboxList);
+                            } else if (meta.source == "draft") {
+                                draftList := List.push(emailId, draftList);
                             } else return #err(#UnknownSource);
 
                             let updatedRegistry : T.EmailRegistry = {
@@ -649,6 +813,7 @@ module {
                                 outbox = outboxList;
                                 important = record.important;
                                 openedMails = record.openedMails;
+                                draft = record.draft;
                                 trash = filteredTrash;
                             };
 
@@ -661,7 +826,7 @@ module {
         };
 
         // get list of trash mails
-        public func fetchTrashMails(caller : Principal,pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+        public func fetchTrashMails(caller : Principal, pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
 
             let trashList : List.List<(Text, T.TrashMetaData)> = switch (registry.get(caller)) {
                 case (?emailRegistry) emailRegistry.trash;
@@ -699,7 +864,7 @@ module {
                 },
             );
 
-            return getPaginatedEmails(caller,Option.get(pageNumber, 1),Option.get(pageSize, 10),totalItems,emails,false);
+            return getPaginatedEmails(caller, Option.get(pageNumber, 1), Option.get(pageSize, 10), totalItems, emails, false);
         };
 
         //delete all mails for the caller while deleting the profile.
