@@ -115,6 +115,22 @@ actor {
     return emailManager.getThreadIds(headMailId);
   };
 
+  public shared ({ caller }) func saveDraftMail(mail : EmailCommands.SendEmailDTO) : async Result.Result<(), EmailTypes.EmailErrors> {
+    assert not Principal.isAnonymous(caller);
+    return await emailManager.saveDraft(caller, mail);
+  };
+
+  public shared ({ caller }) func editDraftMail(emailId : Text, mail : EmailCommands.SendEmailDTO) : async Result.Result<(), EmailTypes.EmailErrors> {
+    assert not Principal.isAnonymous(caller);
+    return await emailManager.editDraft(emailId, mail);
+  };
+
+  public shared ({ caller }) func deleteDraffMail(draftId : Text) : async Result.Result<(), EmailTypes.EmailErrors> {
+    assert not Principal.isAnonymous(caller);
+    return await emailManager.deleteFromDrafts(caller, draftId);
+  };
+  
+  //todo create on fucntion instead of multiple to fetch emails.
   public shared ({ caller }) func fetchInboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
     await emailManager.fetchInboxMails(caller, pageNumber, pageSize);
@@ -132,7 +148,12 @@ actor {
 
   public shared ({ caller }) func fetchTrashMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
-    await emailManager.fetchTrashMails(caller,pageNumber,pageSize);
+    await emailManager.fetchTrashMails(caller, pageNumber, pageSize);
+  };
+
+  public shared ({ caller }) func fetchDraftMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
+    assert not Principal.isAnonymous(caller);
+    await emailManager.fetchDraftMails(caller, pageNumber, pageSize);
   };
 
   public func uploadFile(fileData : EmailCommands.FileRequestDTO) : async Result.Result<EmailCommands.FileResponseDTO, EmailTypes.FileErrors> {

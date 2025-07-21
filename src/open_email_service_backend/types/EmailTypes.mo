@@ -35,6 +35,7 @@ module {
         outbox : List.List<Text>;
         important : List.List<Text>;
         openedMails : List.List<Text>;
+        draft:List.List<Text>;
         trash: List.List<(Text, TrashMetaData)>;
     };
 
