@@ -6,7 +6,7 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import { theme } from '$lib/store/theme'; 
   import { get } from 'svelte/store';
-  import { faPlus, faInbox, faPaperPlane, faSignOutAlt } from '@fortawesome/free-solid-svg-icons'
+  import { faPlus, faInbox, faPaperPlane, faSignOutAlt, faTrash,faFilePen,faStar,faCog } from '@fortawesome/free-solid-svg-icons'
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   export let profile;
 
@@ -46,25 +46,35 @@
        class:border-gray-700={currentTheme === 'dark'}>
 
   <div>
-    <a href="/profile" class="block p-1 rounded transition-colors hover:bg-opacity-20"
-       class:hover:bg-gray-700={currentTheme === 'dark'}
-       class:hover:bg-gray-100={currentTheme === 'light'}>
-      <div class="p-2 flex items-center space-x-4 border-b"
-           class:border-gray-700={currentTheme === 'dark'}
-           class:border-gray-200={currentTheme === 'light'}>
-        <img src={generateImageSrc(profile?.profileImage)} alt="Profile" class="w-12 h-12 rounded-full border-2"
-             class:border-gray-600={currentTheme === 'dark'}
-             class:border-gray-300={currentTheme === 'light'}/>
-        <div>
-          <div class="text-sm font-semibold">{profile?.name || "User"}</div>
-          <div class="text-xs truncate"
-               class:text-gray-400={currentTheme === 'dark'}
-               class:text-gray-500={currentTheme === 'light'}>{profile?.userAddress || "user@example.com"}</div>
+    
+    <div class="p-2 flex items-center border-b"
+        class:border-gray-700={currentTheme === 'dark'}
+        class:border-gray-200={currentTheme === 'light'}>
+
+      <img src={generateImageSrc(profile?.profileImage)} alt="Profile"
+          class="w-12 h-12 rounded-full border-2 mr-3"
+          class:border-gray-600={currentTheme === 'dark'}
+          class:border-gray-300={currentTheme === 'light'} />
+
+      <div class="flex-1">
+        <div class="text-sm font-semibold">{profile?.name || "User"}</div>
+        <div class="text-xs truncate"
+            class:text-gray-400={currentTheme === 'dark'}
+            class:text-gray-500={currentTheme === 'light'}>
+          {profile?.userAddress || "user@example.com"}
         </div>
       </div>
-    </a>
 
-    <nav class="p-4 space-y-2">
+      <a href="/profile"
+        class="p-2 rounded transition-colors ml-auto"
+        class:hover:bg-gray-700={currentTheme === 'dark'}
+        class:hover:bg-gray-100={currentTheme === 'light'}
+        aria-label="Settings">
+        <FontAwesomeIcon icon={faCog} class="h-4 w-4 text-gray-500 transition-colors"/>
+      </a>
+    </div>
+
+    <nav class="p-3 space-y-2">
       <button
         class="flex items-center gap-3 w-full p-2 rounded text-left focus:outline-none transition-colors hover:bg-opacity-20"
         class:hover:bg-gray-700={currentTheme === 'dark'}
@@ -76,7 +86,7 @@
         <span>New Mail</span>
       </button>
 
-      <a href="/home" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
+      <a href="/home" class="flex items-center gap-3 p-2 rounded  transition-colors hover:bg-opacity-20"
          class:hover:bg-gray-700={currentTheme === 'dark'}
          class:hover:bg-gray-100={currentTheme === 'light'}>
         <FontAwesomeIcon icon={faInbox} class="h-4 w-4" />
@@ -88,6 +98,27 @@
          class:hover:bg-gray-100={currentTheme === 'light'}>
         <FontAwesomeIcon icon={faPaperPlane} class="h-4 w-4" />
         <span>Sent</span>
+      </a>
+
+      <a href="/starred" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
+         class:hover:bg-gray-700={currentTheme === 'dark'}
+         class:hover:bg-gray-100={currentTheme === 'light'}>
+        <FontAwesomeIcon icon={faStar} class="h-4 w-4" />
+        <span>Starred</span>
+      </a>
+
+       <a href="/draft" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
+         class:hover:bg-gray-700={currentTheme === 'dark'}
+         class:hover:bg-gray-100={currentTheme === 'light'}>
+        <FontAwesomeIcon icon={faFilePen} class="h-4 w-4" />
+        <span>Draft</span>
+      </a>
+
+      <a href="/trash" class="flex items-center gap-3 p-2 rounded transition-colors hover:bg-opacity-20"
+         class:hover:bg-gray-700={currentTheme === 'dark'}
+         class:hover:bg-gray-100={currentTheme === 'light'}>
+        <FontAwesomeIcon icon={faTrash} class="h-4 w-4" />
+        <span>Trash</span>
       </a>
     </nav>
   </div>

@@ -213,6 +213,47 @@
       editor.chain().focus().toggleOrderedList().run();
     }
   }
+
+  async function handleClose() {
+    if (hasContent()) {
+      if (confirm('Save draft before closing?')) {
+        await saveDraft();
+      }
+    }
+    close();
+  }
+
+  async function saveDraft() {
+    try {
+      showLoader('Saving draft...');
+      
+      let attachmentIds = [];
+      if (attachmentBlob) {
+        const base64String = await blobToBase64(attachmentBlob);
+        attachmentIds = [base64String];
+      }
+      const mail = {
+        to,
+        subject: opt(subject),
+        body: message,
+        isReply,
+        parentMailId,
+        attachmentIds
+      }
+      await mailsStore.saveDraftMail(mail);
+      resetForm();
+    } catch (err) {
+      console.error("Failed to save draft:", err);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  function hasContent() {
+    return (to && to.trim() !== "") || (message && message.trim() !== "");
+  }
+
 </script>
 
 <div class="flex flex-col rounded-lg shadow-lg overflow-hidden w-full max-w-md transition-all duration-300"
@@ -255,15 +296,16 @@
         </svg>
       </button>
       <button
-        aria-label="Close"
-        on:click={close}
-        class="p-1.5 rounded-md transition-colors"
-        class:hover:bg-red-100={currentTheme === 'light'}
-        class:hover:bg-red-900={currentTheme === 'dark'}
-        class:text-red-600={currentTheme === 'light'}
-        class:text-red-400={currentTheme === 'dark'}>
-        ✕
-      </button>
+    aria-label="Close"
+    on:click={handleClose}
+    class="p-1.5 rounded-md transition-colors"
+    class:hover:bg-red-100={currentTheme === 'light'}
+    class:hover:bg-red-900={currentTheme === 'dark'}
+    class:text-red-600={currentTheme === 'light'}
+    class:text-red-400={currentTheme === 'dark'}
+    title={hasContent() ? "Save draft and close" : "Close"}>
+    ✕
+  </button>
     </div>
   </div>
 

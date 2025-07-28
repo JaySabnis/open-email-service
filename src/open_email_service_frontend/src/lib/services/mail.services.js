@@ -59,14 +59,14 @@ export class MailService {
   }
 
   async markItAsImportant(mailId) {
-    console.log(mailId,"mail id received")
+    // console.log(mailId,"mail id received")
     const identityActor = await ActorFactory.createIdentityActor(
       authStore,
       "52yko-eaaaa-aaaaa-qauvq-cai",
         // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const result = await identityActor.markItAsImportant(mailId);
-    console.log(result,"result here")
+    // console.log(result,"result here")
     return result;
   }
 
@@ -77,6 +77,81 @@ export class MailService {
         // "bd3sg-teaaa-aaaaa-qaaba-cai",
     );
     const result = await identityActor.markAsNotImportant(mailId);
+    return result;
+  }
+
+   async fetchStarredMails(pageNumberParam=null,pageSizeParam=null) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const pageNumber = pageNumberParam || null;
+    const pageSize = pageSizeParam || null;
+    const result = await identityActor.fetchStarredMails(pageNumber,pageSize);
+    return result;
+  }
+
+  async fetchTrashMails(pageNumberParam=null,pageSizeParam=null) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const pageNumber = pageNumberParam || null;
+    const pageSize = pageSizeParam || null;
+    const result = await identityActor.fetchTrashMails(pageNumber,pageSize);
+    return result;
+  }
+
+  async fetchDraftMails(pageNumberParam=null,pageSizeParam=null) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const pageNumber = pageNumberParam || null;
+    const pageSize = pageSizeParam || null;
+    const result = await identityActor.fetchDraftMails(pageNumber,pageSize);
+    return result;
+  }
+
+  async saveDraftMail(emailData){
+    const identityActor = await ActorFactory.createIdentityActor(authStore, 
+      "52yko-eaaaa-aaaaa-qauvq-cai"
+      // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+
+    let dto = {
+      to: emailData.to,
+      subject: emailData.subject || null,
+      body: emailData.body,
+      attachmentIds : emailData.attachmentIds || null,
+      isReply: emailData.isReply,
+      parentMailId: emailData.parentMailId || null
+    };
+
+    const result = await identityActor.saveDraftMail(dto);
+    return result;
+  }
+
+  async deleteEmail(mailId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.deleteEmail(mailId);
+    return result;
+  }
+
+  async restoreEmail(mailId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.restoreEmail(mailId);
     return result;
   }
 }

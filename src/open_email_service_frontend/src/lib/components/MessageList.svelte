@@ -5,12 +5,17 @@
   import { showLoader, hideLoader } from '$lib/store/loader-store'; 
   import { get } from "svelte/store";
   import Pagination from "$lib/utils/Pagination.svelte";
-  import { page } from '$app/stores';
   import { authStore } from '$lib/store/auth-store'; 
   import { theme } from "$lib/store/theme";
-
+  import { generateImageSrc } from '$lib/utils/helpers';
+  import {profileStore} from '$lib/store/profile-store'
+  import ConfirmationDialogue from './ConfirmationDialogue.svelte';
+    import { faTrashAlt,faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   const dispatch = createEventDispatcher();
   export let selectedMessage;
+  export let pageType = "inbox";
+  
   let searchTerm = "";
   let mails = [];
   let pageNumber = 1;
@@ -18,20 +23,20 @@
   let totalInboxMails = 0;
   let hasNextPage = false;
   let currentColors;
-  let isSentPage = false;
   let error = null;
   let filteredMails = [];
   let currentTheme = get(theme);
+  let showDeleteConfirmation = false;
 
- function selectMessage(msg) {
+  function selectMessage(msg) {
     if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
       dispatch('select', msg);
     }
   }
 
-  async function getMails() {
+async function getMails() {
     try {
-      showLoader('Loading messages...'); 
+      showLoader('Loading Mails...'); 
       
       const identity = await authStore.sync();
       if (!identity?.getPrincipal) {
@@ -41,15 +46,53 @@
       const pageNumberOpt = [pageNumber];
       const pageSizeOpt = [pageSize];
 
+      const currentUserProfile = (await profileStore.getProfile())?.ok || null;
+
       let mailData;
-      if (isSentPage) {
-        mailData = await mailsStore.fetchOutboxMails(pageNumberOpt, pageSizeOpt);
-      } else {
-        mailData = await mailsStore.fetchInboxMails(pageNumberOpt, pageSizeOpt);
+      switch (pageType) {
+        case "sent":
+          mailData = await mailsStore.fetchOutboxMails(pageNumberOpt, pageSizeOpt);
+          break;
+        case "draft":
+          mailData = await mailsStore.fetchDraftMails(pageNumberOpt, pageSizeOpt);
+          break;
+        case "trash":
+          mailData = await mailsStore.fetchTrashMails(pageNumberOpt, pageSizeOpt);
+          break;
+        case "starred":
+          mailData = await mailsStore.fetchStarredMails(pageNumberOpt, pageSizeOpt);
+          break;
+        default: 
+          mailData = await mailsStore.fetchInboxMails(pageNumberOpt, pageSizeOpt);
       }
 
-      mails = mailData?.data || [];
-      // console.log(mails,"mail")
+      mails = await Promise.all((mailData?.data || []).map(async (mail) => {
+        try {
+          let profileData = null;
+          
+          if (mail?.from) {
+            const fromUserResponse = await profileStore.getProfileByUserAddress(mail.from);
+            profileData = fromUserResponse?.ok || null;
+          }
+          
+          if (!profileData) {
+            profileData = currentUserProfile;
+          }
+
+          return {
+            ...mail,
+            profile: profileData
+          };
+        } catch (err) {
+          console.error(`Failed to process mail ${mail?.id}`, err);
+          return {
+            ...mail,
+            profile: currentUserProfile 
+          };
+        }
+      }));
+
+      // console.log("Fetched mails with profiles:", mails);
       hasNextPage = Number(mailData?.totalPages) > pageNumber;
     } catch (err) {
       console.error("Failed to fetch mails:", err);
@@ -58,7 +101,7 @@
     } finally {
       hideLoader(); 
     }
-  }
+}
 
   function handlePageChange(newPage) {
     pageNumber = newPage;
@@ -68,38 +111,108 @@
   async function markAsImportant(msgId) { 
     try {
       showLoader('Marking important...'); 
-      // console.log(msgId,"msgids")
       const msg = await mailsStore.markItAsImportant(msgId);
       getMails();
-    // console.log(msg,"msg")
     } catch (err) {
       console.error("Failed to mark as important", error);
       error = err;
     } finally {
       hideLoader();
     }
-    
   }
 
-  onMount(async () => {
-    isSentPage = $page.url.pathname.includes('/sent');
-    await getMails();
-  });
-
-  $: {
-    const newIsSentPage = $page.url.pathname.includes('/sent');
-    if (newIsSentPage !== isSentPage) {
-      isSentPage = newIsSentPage;
+   async function markAsNotImportant(msgId) { 
+    try {
+      showLoader('Marking as Unimportant...'); 
+      const msg = await mailsStore.markAsNotImportant(msgId);
       getMails();
+    } catch (err) {
+      console.error("Failed to mark as unimportant", error);
+      error = err;
+    } finally {
+      hideLoader();
     }
   }
 
+  function getMailboxTitle() {
+    switch (pageType) {
+      case "sent":
+        return "Sent Mails";
+      case "draft":
+        return "Draft Mails";
+      case "trash":
+        return "Trash Mails";
+      case "starred":
+        return "Starred Mails";
+      default:
+        return "Inbox Mails";
+    }
+  }
+
+   function getParticipant(msg, index) {
+    switch (pageType) {
+      case "sent":
+        return msg?.to || `Recipient ${index + 1}`;
+      case "draft":
+        return msg?.to ? `Draft to: ${msg.to}` : `Unsaved draft ${index + 1}`;
+      case "trash":
+        return msg?.from ? `From: ${msg.from}` : `Deleted message ${index + 1}`;
+      case "starred":
+        return msg?.from || `Starred sender ${index + 1}`;
+      default: // inbox
+        return msg?.from || `Sender ${index + 1}`;
+    }
+  }
+
+   function handleDeleteClick() {
+    showDeleteConfirmation = true;
+  }
+  
+  function handleDeleteConfirm(msg) {
+    showDeleteConfirmation = false;
+    handleDelete(msg?.id);
+  }
+
+  async function handleDelete(messageId) {
+    if (!messageId) return;
+    
+    try {
+      showLoader('Deleting message...');
+      await mailsStore.deleteEmail(messageId);
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  async function handleRestore(messageId) {
+    if (!messageId) return;
+    
+    try {
+      showLoader('Restoring Mail...');
+      await mailsStore.restoreEmail(messageId);
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to restore mail:", err);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  onMount(async () => {
+    await getMails();
+  });
+
   $: filteredMails = searchTerm.trim()
-  ? mails.filter(m => (m.subject || '').toLowerCase().includes(searchTerm.trim().toLowerCase()))
-  : mails;
+    ? mails.filter(m => (m.subject || '').toLowerCase().includes(searchTerm.trim().toLowerCase()))
+    : mails;
 
   $: if (searchTerm) {
-  pageNumber = 1;
+    pageNumber = 1;
   }
 
   theme.subscribe((value) => {
@@ -112,10 +225,10 @@
      class:bg-white={currentTheme === 'light'}
      class:bg-gray-900={currentTheme === 'dark'}>
   
-  <h2 class="text-2xl font-semibold mb-6"
+  <h2 class="text-lg font-semibold mb-6"
       class:text-gray-800={currentTheme === 'light'}
       class:text-gray-200={currentTheme === 'dark'}>
-    {isSentPage ? "Sent Mails" : "Inbox Mails"}
+   {getMailboxTitle()}
   </h2>
 
   <input
@@ -137,49 +250,117 @@
     </div>
   {:else if filteredMails.length > 0}
     <div class="space-y-4">
-      {#each filteredMails as msg, i}
-        <div
-          class="border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-5 flex justify-between items-center group"
-          class:bg-white={currentTheme === 'light' && selectedMessage?.id !== msg.id}
-          class:bg-gray-800={currentTheme === 'dark' && selectedMessage?.id !== msg.id}
-          class:bg-blue-50={currentTheme === 'light' && selectedMessage?.id === msg.id}
-          class:bg-blue-900={currentTheme === 'dark' && selectedMessage?.id === msg.id}
-          class:border-gray-200={currentTheme === 'light'}
-          class:border-gray-700={currentTheme === 'dark'}
-          on:click={() => selectMessage(msg)}
-        >
-          <div class="flex-1 min-w-0">
-            <p class="text-base font-medium truncate group-hover:text-blue-600"
-               class:text-gray-800={currentTheme === 'light'}
-               class:text-gray-200={currentTheme === 'dark'}>
-              {isSentPage ? (msg?.to || `Recipient ${i + 1}`) : (msg?.from || `Sender ${i + 1}`)}
-            </p>
-            <p class="text-sm truncate"
-               class:text-gray-600={currentTheme === 'light'}
-               class:text-gray-400={currentTheme === 'dark'}>
-              {msg?.subject || 'No Subject'}
-            </p>
-          </div>
-
-          <div class="flex flex-col items-end gap-2">
-            <div on:click|stopPropagation={() => markAsImportant(msg.id)} 
-                 class="cursor-pointer text-yellow-500">
-              {#if msg.starred}
-                ★
-              {:else}
-                ☆
-              {/if}
-            </div>
-
-            <span class="text-sm pl-6 shrink-0 whitespace-nowrap"
-                  class:text-gray-500={currentTheme === 'light'}
-                  class:text-gray-400={currentTheme === 'dark'}>
-              {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleString()}
-            </span>
-          </div>
+{#each filteredMails as msg, i}
+  <div
+    class="border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-1.5 flex justify-between items-start group"
+    class:bg-white={currentTheme === 'light' && selectedMessage?.id !== msg.id}
+    class:bg-gray-800={currentTheme === 'dark' && selectedMessage?.id !== msg.id}
+    class:bg-blue-50={currentTheme === 'light' && selectedMessage?.id === msg.id}
+    class:bg-blue-900={currentTheme === 'dark' && selectedMessage?.id === msg.id}
+    class:border-gray-200={currentTheme === 'light'}
+    class:border-gray-700={currentTheme === 'dark'}
+    on:click={() => selectMessage(msg)}
+  >
+    <div class="flex flex-1 min-w-0 gap-2">
+      {#if msg.profile?.profileImage}
+        <img 
+          src={generateImageSrc(msg.profile.profileImage)}
+          alt="Profile" 
+          class="w-10 h-10 rounded-full object-cover flex-shrink-0 mt-0.5"
+        />
+      {:else}
+        <div class="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center mt-0.5">
+          {msg.mailData?.from?.substring(0, 2).toUpperCase() || '?'}
         </div>
-      {/each}
+      {/if}
 
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline gap-2">
+          <p class="text-sm font-medium truncate group-hover:text-blue-600"
+             class:text-gray-800={currentTheme === 'light'}
+             class:text-gray-200={currentTheme === 'dark'}>
+            {getParticipant(msg, i)}
+          </p>
+        </div>
+
+        <p class="text-xs truncate"
+           class:text-gray-600={currentTheme === 'light'}
+           class:text-gray-400={currentTheme === 'dark'}>
+          {msg?.subject || 'No Subject'}
+        </p>
+
+        {#if msg?.preview}
+          <p class="text-xs truncate text-gray-500 mt-0.5"
+             class:text-gray-500={currentTheme === 'light'}
+             class:text-gray-300={currentTheme === 'dark'}>
+            {msg?.preview}
+          </p>
+        {/if}
+      </div>
+    </div>
+
+    <div class="flex flex-col justify-between items-end h-full ml-4 gap-4">
+  <div class="flex items-center gap-2">
+    <div
+      class="cursor-pointer text-yellow-500 text-sm flex items-center justify-center h-4 w-4"
+      on:click|stopPropagation={pageType !== 'trash' && pageType !== 'draft'
+        ? () => msg?.starred ? markAsNotImportant(msg.id) : markAsImportant(msg.id)
+        : null}
+    >
+      {#if msg?.starred}
+        ★
+      {:else}
+        ☆
+      {/if}
+    </div>
+
+    {#if pageType !== 'trash'}
+      <button
+        on:click|stopPropagation={handleDeleteClick}
+        class="h-4 w-4 flex items-center justify-center"
+        class:text-gray-500={currentTheme === 'light'}
+        class:text-gray-400={currentTheme === 'dark'}
+        class:hover:text-red-500={currentTheme === 'light'}
+        class:hover:text-red-400={currentTheme === 'dark'}
+        title="Delete"
+      >
+        <FontAwesomeIcon icon={faTrashAlt} class="h-4 w-4" />
+      </button>
+    {:else}
+      <button
+        on:click|stopPropagation={() => handleRestore(msg.id)}
+        title="Restore Mail"
+        class="h-4 w-4 flex items-center justify-center text-green-600 hover:text-green-800"
+      >
+        <FontAwesomeIcon icon={faRotateLeft} class="h-4 w-4" />
+      </button>
+    {/if}
+  </div>
+
+  <div class="flex items-center gap-1 text-xs whitespace-nowrap mt-auto"
+       class:text-gray-500={currentTheme === 'light'}
+       class:text-gray-400={currentTheme === 'dark'}>
+    <span>
+      {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleDateString()}
+    </span>
+    <span class="opacity-70">•</span>
+    <span>
+      {new Date(Number(msg?.createdOn) / 1_000_000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+    </span>
+  </div>
+
+  {#if showDeleteConfirmation}
+    <ConfirmationDialogue
+      title="Delete Message"
+      message="Are you sure you want to delete this message? This action cannot be undone."
+      confirmText="Delete"
+      on:confirm={() => handleDeleteConfirm(msg.id)}
+      on:cancel={() => showDeleteConfirmation = false}
+    />
+  {/if}
+</div>
+  </div>
+{/each}
       <Pagination
         currentPage={pageNumber}
         {hasNextPage}
