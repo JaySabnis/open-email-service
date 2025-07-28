@@ -7,11 +7,11 @@
 
 
 <svelte:head>
-  <title>Open Mail | Outgoing</title>
+  <title>Open Mail | Sent</title>
 </svelte:head>
 
 <div class="w-full">
-  <MessageComponent />
+  <MessageComponent pageType="sent" />
 
   {#if $showWriteMail}
     <div class="fixed bottom-0 right-30 w-100 max-w-full shadow-lg p-0 z-50"

@@ -23,7 +23,7 @@
 
   async function fetchAndSetProfile() {
     try {
-      showLoader('Loading profile...');
+      showLoader('Loading...');
       const res = await profileStore.getProfile();
       
       if (res?.err) {
@@ -123,7 +123,10 @@
         showSidebar={showSidebar}
       />
       
-      <main class="flex-1 pt-10">
+      <main class="flex-1 pt-10"
+        class:bg-white={currentTheme === 'light'}
+        class:bg-gray-900={currentTheme === 'dark'}
+      >
         <slot />
       </main>
     </div>

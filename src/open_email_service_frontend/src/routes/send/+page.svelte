@@ -5,6 +5,8 @@
   import { get } from 'svelte/store';
   import { showLoader, hideLoader } from '$lib/store/loader-store'; 
   import { goto } from '$app/navigation';
+  import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   
   let to = "";
   let subject = "";
@@ -109,6 +111,21 @@
      class:bg-white={currentTheme === 'light'}
      class:bg-gray-800={currentTheme === 'dark'}>
 
+     <div class="mb-4">
+      <button
+        type="button"
+        on:click={() => history.back()}
+        class="flex items-center gap-2 text-sm font-medium transition-colors"
+        class:text-gray-700={currentTheme === 'light'}
+        class:text-gray-300={currentTheme === 'dark'}
+        class:hover:text-blue-600={currentTheme === 'light'}
+        class:hover:text-blue-400={currentTheme === 'dark'}
+      >
+        <FontAwesomeIcon icon={faArrowLeft} class="h-4 w-4" />
+        Back
+      </button>
+    </div>
+
   <h1 class="text-2xl font-semibold mb-6 text-center"
       class:text-gray-800={currentTheme === 'light'}
       class:text-gray-200={currentTheme === 'dark'}>
@@ -125,7 +142,7 @@
       <input
         id="to"
         bind:value={to}
-        class="w-full px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md border"
         placeholder="recipient@example.com"
         required
         class:border-gray-300={currentTheme === 'light'}
@@ -151,7 +168,7 @@
         id="subject"
         type="text"
         bind:value={subject}
-        class="w-full px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md border"
         placeholder="Email subject"
         required
         class:border-gray-300={currentTheme === 'light'}
@@ -177,7 +194,7 @@
         id="body"
         rows="5"
         bind:value={body}
-        class="w-full px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md border"
         placeholder="Write your message here..."
         required
         class:border-gray-300={currentTheme === 'light'}
@@ -204,7 +221,7 @@
         type="file"
         accept="*/*"
         on:change={handleAttachmentUpload}
-        class="w-full px-3 py-2 rounded-md"
+        class="w-full px-3 py-2 rounded-md border"
         class:border-gray-300={currentTheme === 'light'}
         class:border-gray-600={currentTheme === 'dark'}
         class:bg-white={currentTheme === 'light'}

@@ -8,6 +8,10 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import { theme } from "$lib/store/theme";
   import { get } from 'svelte/store';
+  import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
+  import { faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+  import ConfirmationDialogue from './ConfirmationDialogue.svelte';
   export let message;
 
   const dispatch = createEventDispatcher();
@@ -16,6 +20,8 @@
   let showReplyModal = false; 
   let fromUser = null;
   let currentTheme = get(theme);
+  let showDeleteConfirmation = false;
+  export let pageType = "inbox";
 
   function close() {
     dispatch('close');
@@ -26,7 +32,7 @@
   }
 
   function handleSendReply(event) {
-    console.log('Replying with:', event.detail);
+    // console.log('Replying with:', event.detail);
     showReplyModal = false;
   }
 
@@ -39,11 +45,19 @@
       if (mail) {
         message = mail;
         mailData = mail?.ok?.[0];
-        console.log(mail,"maildata")
         const fromUserResponse = await profileStore.getProfileByUserAddress(mailData.from);
         fromUser = fromUserResponse?.ok || null;
 
-        console.log(fromUser,"fromuser data")
+        if (!fromUser) {
+        try {
+          const currentUserResponse = await profileStore.getProfile();
+          fromUser = currentUserResponse?.ok || null;
+        } catch (err) {
+          console.error('Error fetching current user profile:', err);
+        }
+      }
+
+        // console.log(fromUser,"fromuser data")
       } else {
         throw new Error('Mail not found');
       }
@@ -53,6 +67,71 @@
     } finally {
       hideLoader();
     }
+  }
+
+  async function handleDelete(messageId) {
+    if (!messageId) return;
+    
+    try {
+      showLoader('Deleting message...');
+      await mailsStore.deleteEmail(messageId);
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete message:", err);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  async function handleRestore(messageId) {
+    if (!messageId) return;
+    
+    try {
+      showLoader('Restoring Mail...');
+      await mailsStore.restoreEmail(messageId);
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to restore mail:", err);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  async function markAsImportant(msgId) { 
+    try {
+      showLoader('Marking important...'); 
+      const msg = await mailsStore.markItAsImportant(msgId);
+      // window.location.reload();
+    } catch (err) {
+      console.error("Failed to mark as important", error);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+
+   async function markAsNotImportant(msgId) { 
+    try {
+      showLoader('Marking as Unimportant...'); 
+      const msg = await mailsStore.markAsNotImportant(msgId);
+      // window.location.reload();
+    } catch (err) {
+      console.error("Failed to mark as unimportant", error);
+      error = err;
+    } finally {
+      hideLoader();
+    }
+  }
+  
+  function handleDeleteClick() {
+    showDeleteConfirmation = true;
+  }
+  
+  function handleDeleteConfirm() {
+    showDeleteConfirmation = false;
+    handleDelete(mailData?.id);
   }
 
   let lastMessageId = null;
@@ -78,24 +157,66 @@
     </div>
   {:else}
     <div class="flex justify-between items-start mb-4">
-      <h2 class="text-2xl font-semibold ml-[3.5rem]"
-          class:text-gray-800={currentTheme === 'light'}
-          class:text-gray-200={currentTheme === 'dark'}>
-        {mailData?.subject || 'No Subject'}
-      </h2>
-      <button
-        on:click={close}
-        class="transition text-lg font-bold px-2"
-        class:text-gray-500={currentTheme === 'light'}
-        class:text-gray-400={currentTheme === 'dark'}
-        class:hover:text-red-600={currentTheme === 'light'}
-        class:hover:text-red-500={currentTheme === 'dark'}
-        aria-label="Close message details"
-        title="Close"
-      >
-        ✖
-      </button>
-    </div>
+  <h2 class="text-2xl font-semibold ml-[3.5rem]"
+      class:text-gray-800={currentTheme === 'light'}
+      class:text-gray-200={currentTheme === 'dark'}>
+    {mailData?.subject || 'No Subject'}
+  </h2>
+  <div class="flex gap-2">
+   {#if pageType !== 'trash'}
+    <button
+      on:click={handleDeleteClick}
+      class="transition text-lg p-2 rounded-full"
+      class:text-gray-500={currentTheme === 'light'}
+      class:text-gray-400={currentTheme === 'dark'}
+      class:hover:bg-red-100={currentTheme === 'light'}
+      class:hover:bg-red-900={currentTheme === 'dark'}
+      class:hover:text-red-600={currentTheme === 'light'}
+      class:hover:text-red-400={currentTheme === 'dark'}
+      aria-label="Delete message"
+      title="Delete"
+    >
+      <FontAwesomeIcon icon={faTrashAlt} class="h-4 w-4" />
+    </button>
+  {/if}
+
+    {#if pageType === 'trash'}
+  <button
+    on:click={() => handleRestore(mailData.id)}
+    title="Restore Mail"
+    class="flex items-center gap-1 text-xs text-green-600 hover:text-green-800 transition-colors px-1 py-0 rounded border border-green-300"
+  >
+    <FontAwesomeIcon icon={faRotateLeft} class="h-2 w-2" />
+    <span>Restore</span>
+  </button>
+{/if}
+
+
+    {#if showDeleteConfirmation}
+      <ConfirmationDialogue
+        title="Delete Message"
+        message="Are you sure you want to delete this message? This action cannot be undone."
+        confirmText="Delete"
+        on:confirm={handleDeleteConfirm}
+        on:cancel={() => showDeleteConfirmation = false}
+      />
+    {/if}
+    <button
+      on:click={close}
+      class="transition text-lg p-2 rounded-full"
+      class:text-gray-500={currentTheme === 'light'}
+      class:text-gray-400={currentTheme === 'dark'}
+      class:hover:bg-gray-100={currentTheme === 'light'}
+      class:hover:bg-gray-800={currentTheme === 'dark'}
+      class:hover:text-red-600={currentTheme === 'light'}
+      class:hover:text-red-500={currentTheme === 'dark'}
+      aria-label="Close message details"
+      title="Close"
+    >
+      ✖
+    </button>
+  </div>
+</div>
 
     <div class="flex gap-4 mb-4">
       <div class="w-14 flex-shrink-0">
@@ -121,7 +242,7 @@
             <p class="text-xs lowercase"
                class:text-gray-500={currentTheme === 'light'}
                class:text-gray-400={currentTheme === 'dark'}>
-              &lt;{mailData?.from || 'unknown@domain.com'}&gt;
+              &lt;{mailData?.from || fromUser?.userAddress}&gt;
             </p>
           </div>
           <p class="text-xs mb-1"
@@ -132,15 +253,22 @@
         </div>
         <div class="flex items-center gap-3">
           <p class="text-xs whitespace-nowrap"
-             class:text-gray-500={currentTheme === 'light'}
-             class:text-gray-400={currentTheme === 'dark'}>
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
             {new Date(Number(mailData?.createdOn) / 1_000_000).toLocaleString()}
           </p>
-          {#if mailData?.starred}
-            <span title="Starred" class="text-yellow-500 text-xl">★</span>
-          {:else}
-            <span title="Not Starred" class="text-yellow-500 text-xl">☆</span>
-          {/if}
+
+          <div class="cursor-pointer text-yellow-500"
+                  on:click|stopPropagation={pageType !== 'trash' && pageType !== 'draft'
+                    ? () => mailData?.starred ? markAsNotImportant(mailData?.id) : markAsImportant(mailData?.id)
+                    : null}
+                >
+                  {#if mailData?.starred}
+                    ★
+                  {:else}
+                    ☆
+                  {/if}
+                </div>
         </div>
       </div>
     </div>

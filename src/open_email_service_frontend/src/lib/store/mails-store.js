@@ -29,6 +29,30 @@ function mailStore() {
     return new MailService().markAsNotImportant(mailId);
   }
 
+  async function fetchStarredMails(pageNumber, pageSize) {
+    return new MailService().fetchStarredMails(pageNumber,pageSize);
+  }
+
+  async function fetchTrashMails(pageNumber, pageSize) {
+    return new MailService().fetchTrashMails(pageNumber,pageSize);
+  }
+
+  async function fetchDraftMails(pageNumber, pageSize) {
+    return new MailService().fetchDraftMails(pageNumber,pageSize);
+  }
+
+  async function saveDraftMail(emailData) {
+    return new MailService().saveDraftMail(emailData);
+  }
+
+  async function deleteEmail(mailId) {
+    return new MailService().deleteEmail(mailId);
+  }
+
+  async function restoreEmail(mailId) {
+    return new MailService().restoreEmail(mailId);
+  }
+
   return {
     fetchInboxMails,
     sendEmails,
@@ -36,7 +60,13 @@ function mailStore() {
     subscribe,
     getMailById,
     markItAsImportant,
-    markAsNotImportant
+    markAsNotImportant,
+    fetchStarredMails,
+    fetchTrashMails,
+    fetchDraftMails,
+    saveDraftMail,
+    deleteEmail,
+    restoreEmail
   };
 }
 

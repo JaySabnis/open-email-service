@@ -4,7 +4,7 @@
   export let showSidebar;
 </script>
 
-<nav class="fixed top-0 left-0 right-0 z-50 p-4 border-b shadow-sm transition-colors duration-300"
+<nav class="fixed top-0 left-0 right-0 z-50 p-3.5 border-b shadow-sm transition-colors duration-300"
      class:bg-white={currentTheme === 'light'}
      class:bg-gray-800={currentTheme === 'dark'}
      class:border-gray-200={currentTheme === 'light'}
