@@ -43,7 +43,7 @@ module {
                 return #err(#ErrorSelfTransfer);
             };
 
-            if (mail.isReply and mail.parentMailId == null) {
+            if (mail.isReply and mail.parentMailId == null) { // consider checking empy strings as well.
                 return #err(#MissingParentId);
             };
 
@@ -649,8 +649,11 @@ module {
                                     attachments = ?attachments;
                                     createdOn = threadEmail.createdOn;
                                     starred = isStarred;
-                                    readFlag = true;
+                                    readFlag = true;//true
                                 });
+
+                                //once mail is opened mark it as read.
+                                markAsRead(caller,id);
                             };
                             case null {};
                         };
