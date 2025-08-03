@@ -22,7 +22,7 @@ actor {
   stable var stable_registries : [(Principal, EmailTypes.EmailRegistry)] = [];
   stable var stable_fileStore : [(Text, EmailTypes.File)] = [];
   stable var stable_threads : [(Text, EmailTypes.Thread)] = [];
-
+  
   //profile manager
   let profileService = ProfileManager.ProfileManager();
 
@@ -162,6 +162,11 @@ actor {
 
   public query func getFile(fileId : Text) : async Result.Result<EmailQueries.File, EmailTypes.FileErrors> {
     emailManager.getFile(fileId);
+  };
+
+  public shared ({ caller }) func deleteFile(fileId : Text) : async Result.Result<(), EmailTypes.FileErrors> {
+    assert not Principal.isAnonymous(caller);
+    emailManager.deleteFile(fileId);
   };
 
   system func preupgrade() {
