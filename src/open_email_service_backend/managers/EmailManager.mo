@@ -254,6 +254,18 @@ module {
         case null List.nil();
       };
 
+      let trashMap = TrieMap.TrieMap<Text, Bool>(Text.equal, Text.hash);// only temporary fix , need to creat proper hashmap for optimisation of code.
+        switch (registry.get(caller)) {
+          case (?emailRegistry) {
+          let trashList=List.toArray<(Text, T.TrashMetaData)>(emailRegistry.trash);
+            for (entry in Iter.fromArray(trashList)) {
+              trashMap.put(entry.0,true);
+            };
+            
+          };
+          case null {};
+      };
+
       let totalItems : Nat = List.size(receviedEmailIds);
 
       // todo:instead of fetching all mails just fetch latest mails
@@ -280,6 +292,11 @@ module {
                 // if reply exist show main head mail so when opened it will show full thread.
                 switch (email.parentMailId) {
                   case (?parentMailId) {
+                    if (Option.get(trashMap.get(parentMailId), false)) {// skip the child or thread in case if parent mail id is in trash
+                      // Debug.print("ℹ️ Skipping reply " # id # " since parent is in trash.");
+                      return null;
+                    };
+
                     switch (emailStore.get(parentMailId)) {
                       case (?parentMail) {
                         let responseEmail : EmailQueries.EmailResponseDTO = {
