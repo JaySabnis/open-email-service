@@ -10,7 +10,7 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import {profileStore} from '$lib/store/profile-store'
   import ConfirmationDialogue from './ConfirmationDialogue.svelte';
-  import { faTrashAlt,faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+  import { faTrashAlt,faRotateLeft,faSyncAlt } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   import { getMails } from '$lib/utils/CommonApi';
   const dispatch = createEventDispatcher();
@@ -30,6 +30,7 @@
   let showDeleteConfirmation = false;
   let unselectMessage = false;
   let messageToDelete = null;
+  let profilesCache = {};
 
     function selectMessage(msg) {
       if (unselectMessage) {
@@ -40,14 +41,56 @@
       }
     }
 
+  async function getProfileForMessage(msg) {
+    if (pageType === 'sent' || pageType === 'draft') {
+      if (!msg.to) return null;
+      
+      const cacheKey = `to_${msg.to}`;
+    
+      if (profilesCache[cacheKey] !== undefined) {
+        // console.log("Using cached profile for:", msg.to, profilesCache[cacheKey]);
+        return profilesCache[cacheKey];
+      }
+      try {
+        const response = await profileStore.getProfileByUserAddress(msg.to);
+        const profile = response?.ok || null;
+        profilesCache[cacheKey] = profile;
+        // console.log("Fetched and cached profile for:", msg.to, profile);
+        return profile;
+      } catch (err) {
+        console.error("Error fetching recipient profile:", err);
+        profilesCache[cacheKey] = null;
+        return null;
+      }
+    } else {
+      return msg.profile;
+    }
+  }
+
   async function fetchMails() {
     try {
       showLoader('Loading Mails...');
       const result = await getMails(pageType, pageNumber, pageSize);
       mails = result.mails;
-      // console.log("Fetched mails:", mails);
       hasNextPage = result.hasNextPage;
       error = result.error;
+      console.log("Fetched mails:", mails);
+      if (pageType === 'sent' || pageType === 'draft') {
+        await Promise.all(mails.map(async msg => {
+          if (msg.to) {
+            const cacheKey = `to_${msg.to}`;
+            if (profilesCache[cacheKey] === undefined) {
+              try {
+                const response = await profileStore.getProfileByUserAddress(msg.to);
+                profilesCache[cacheKey] = response?.ok || null;
+              } catch (err) {
+                console.error("Error pre-fetching profile:", err);
+                profilesCache[cacheKey] = null;
+              }
+            }
+          }
+        }));
+      }
     } catch (err) {
       console.error("Error in component while fetching mails:", err);
       error = err;
@@ -62,26 +105,40 @@
     fetchMails();
   }
 
-  async function markAsImportant(msgId) { 
+    async function markAsImportant(msgId) { 
     try {
+      mails = mails.map(msg => 
+        msg.id === msgId ? {...msg, starred: true} : msg
+      );
+      
       showLoader('Marking important...'); 
-      const msg = await mailsStore.markItAsImportant(msgId);
-      getMails();
+      await mailsStore.markItAsImportant(msgId);
+      await fetchMails();
     } catch (err) {
-      console.error("Failed to mark as important", error);
+      mails = mails.map(msg => 
+        msg.id === msgId ? {...msg, starred: false} : msg
+      );
+      console.error("Failed to mark as important", err);
       error = err;
     } finally {
       hideLoader();
     }
   }
 
-   async function markAsNotImportant(msgId) { 
+  async function markAsNotImportant(msgId) { 
     try {
+      mails = mails.map(msg => 
+        msg.id === msgId ? {...msg, starred: false} : msg
+      );
+      
       showLoader('Marking as Unimportant...'); 
-      const msg = await mailsStore.markAsNotImportant(msgId);
-      getMails();
+      await mailsStore.markAsNotImportant(msgId);
+      await fetchMails();
     } catch (err) {
-      console.error("Failed to mark as unimportant", error);
+      mails = mails.map(msg => 
+        msg.id === msgId ? {...msg, starred: true} : msg
+      );
+      console.error("Failed to mark as unimportant", err);
       error = err;
     } finally {
       hideLoader();
@@ -106,9 +163,9 @@
    function getParticipant(msg, index) {
     switch (pageType) {
       case "sent":
-        return msg?.from || `Recipient ${index + 1}`;
+        return msg?.to || `Recipient ${index + 1}`;
       case "draft":
-        return msg?.from ? `Draft to: ${msg.to}` : `Unsaved draft ${index + 1}`;
+        return msg?.to ? `Draft to: ${msg.to}` : `Unsaved draft ${index + 1}`;
       case "trash":
         return msg?.from ? `From: ${msg.from}` : `Deleted mail ${index + 1}`;
       case "starred":
@@ -165,6 +222,11 @@
     }
   }
 
+  async function reloadData() {
+    pageNumber = 1; 
+    await fetchMails();
+  }
+
     onMount(async () => {
     await fetchMails();
   });
@@ -187,11 +249,28 @@
      class:bg-white={currentTheme === 'light'}
      class:bg-gray-900={currentTheme === 'dark'}>
   
-  <h2 class="text-lg font-semibold mb-6"
-      class:text-gray-800={currentTheme === 'light'}
-      class:text-gray-200={currentTheme === 'dark'}>
-   {getMailboxTitle()}
-  </h2>
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-lg font-semibold"
+        class:text-gray-800={currentTheme === 'light'}
+        class:text-gray-200={currentTheme === 'dark'}>
+      {getMailboxTitle()}
+    </h2>
+    
+    <button
+      on:click={reloadData}
+      class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm"
+      class:bg-gray-100={currentTheme === 'light'}
+      class:bg-gray-700={currentTheme === 'dark'}
+      class:hover:bg-gray-200={currentTheme === 'light'}
+      class:hover:bg-gray-600={currentTheme === 'dark'}
+      class:text-gray-700={currentTheme === 'light'}
+      class:text-gray-200={currentTheme === 'dark'}
+      title="Reload data"
+    >
+      <FontAwesomeIcon icon={faSyncAlt} class="h-4 w-4" />
+      <span>Reload</span>
+    </button>
+  </div>
 
   <input
     type="text"
@@ -230,60 +309,80 @@
       }
     }}
 >
-    <div class="flex flex-1 min-w-0 gap-2">
-      {#if msg.profile?.profileImage}
-        <img 
-          src={generateImageSrc(msg.profile.profileImage)}
-          alt="Profile" 
-          class="w-10 h-10 rounded-full object-cover flex-shrink-0 mt-0.5"
-        />
-      {:else}
-        <div class="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center mt-0.5">
-          {msg.mailData?.from?.substring(0, 2).toUpperCase() || '?'}
-        </div>
-      {/if}
-
-      <div class="flex-1 min-w-0">
-        <div class="flex items-baseline gap-2">
-          <p class="text-sm font-medium truncate group-hover:text-blue-600"
-             class:text-gray-800={currentTheme === 'light'}
-             class:text-gray-200={currentTheme === 'dark'}>
-            {getParticipant(msg, i)}
-          </p>
-        </div>
-
-        <p class="text-xs truncate"
-           class:text-gray-600={currentTheme === 'light'}
-           class:text-gray-400={currentTheme === 'dark'}>
-          {msg?.subject || ''}
-        </p>
-
-        {#if msg?.preview}
-          <p class="text-xs truncate text-gray-500 mt-0.5"
-             class:text-gray-500={currentTheme === 'light'}
-             class:text-gray-300={currentTheme === 'dark'}>
-            {msg?.preview}
-          </p>
+<div class="flex flex-1 min-w-0 gap-2">
+  {#await getProfileForMessage(msg) then profile}
+    {#if profile?.profileImage}
+      <img 
+        src={generateImageSrc(profile.profileImage)}
+        alt="Profile" 
+        class="w-10 h-10 rounded-full object-cover flex-shrink-0 mt-0.5"
+      />
+    {:else}
+      <div class="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center mt-0.5">
+        {#if profile?.name}
+          {(profile.name + ' ' + (profile.surname || '')).substring(0, 2).toUpperCase()}
+        {:else}
+          {(pageType === 'sent' || pageType === 'draft' ? msg.to : msg.from)?.substring(0, 2).toUpperCase() || '?'}
         {/if}
       </div>
+    {/if}
+  {:catch}
+    <div class="w-10 h-10 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center mt-0.5">
+      {(pageType === 'sent' || pageType === 'draft' ? msg.to : msg.from)?.substring(0, 2).toUpperCase() || '?'}
     </div>
+  {/await}
+
+  <div class="flex-1 min-w-0">
+    <div class="flex items-baseline gap-2">
+      <p class="text-sm font-medium truncate group-hover:text-blue-600"
+         class:text-gray-800={currentTheme === 'light'}
+         class:text-gray-200={currentTheme === 'dark'}>
+        {#await getProfileForMessage(msg) then profile}
+          {#if profile?.name || profile?.surname}
+            {[profile.name, profile.surname].filter(Boolean).join(' ')}
+          {:else}
+            {pageType === 'sent' || pageType === 'draft' ? msg.to : msg.from}
+          {/if}
+        {:catch}
+          {pageType === 'sent' || pageType === 'draft' ? msg.to : msg.from}
+        {/await}
+      </p>
+    </div>
+
+    <p class="text-xs truncate"
+       class:text-gray-600={currentTheme === 'light'}
+       class:text-gray-400={currentTheme === 'dark'}>
+      {msg?.subject || ''}
+    </p>
+
+    {#if msg?.preview}
+      <p class="text-xs truncate text-gray-500 mt-0.5"
+         class:text-gray-500={currentTheme === 'light'}
+         class:text-gray-300={currentTheme === 'dark'}>
+        {msg?.preview}
+      </p>
+    {/if}
+  </div>
+</div>
 
     <div class="flex flex-col justify-between items-end h-full ml-4 gap-4">
   <div class="flex items-center gap-2">
-    <div
-      class="cursor-pointer text-yellow-500 text-sm flex items-center justify-center h-4 w-4"
-      on:click|stopPropagation={pageType !== 'trash' && pageType !== 'draft'
-        ? () => {
-          // msg.starred = !msg.starred;
-          msg?.starred ? markAsNotImportant(msg.id) : markAsImportant(msg.id)}
-        : null}
-    >
-      {#if msg?.starred}
-        ★
-      {:else}
-        ☆
-      {/if}
-    </div>
+   {#if pageType !== 'draft'}
+  <div
+    class="cursor-pointer text-yellow-500 text-sm flex items-center justify-center h-4 w-4"
+    on:click|stopPropagation={pageType !== 'trash'
+      ? () => {
+        msg.starred ? markAsNotImportant(msg.id) : markAsImportant(msg.id)
+      }
+      : null}
+  >
+    {#if msg.starred}
+      ★
+    {:else}
+      ☆
+    {/if}
+  </div>
+{/if}
 
     {#if pageType !== 'trash'}
       <button

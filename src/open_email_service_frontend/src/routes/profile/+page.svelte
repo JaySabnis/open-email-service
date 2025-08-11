@@ -29,7 +29,7 @@
   let showSuccess = false;
   let submitting = false;
   let fullAddress = "";
-  const suffix = "@icp";
+  const suffix = "@openmail";
   let showDeleteConfirmation = false;
   let isDeleting = false;
 
@@ -336,7 +336,7 @@
         <div>
           <p class="text-xs uppercase font-semibold"
              class:text-gray-500={currentTheme === 'light'}
-             class:text-gray-400={currentTheme === 'dark'}>Address</p>
+             class:text-gray-400={currentTheme === 'dark'}>Email Address</p>
           <p class="text-lg font-medium"
              class:text-gray-900={currentTheme === 'light'}
              class:text-gray-100={currentTheme === 'dark'}>{profile?.userAddress || '-'}</p>
@@ -466,7 +466,7 @@
             <div class="absolute inset-y-0 right-10 flex items-center pointer-events-none text-lg font-medium"
                  class:text-gray-400={currentTheme === 'light'}
                  class:text-gray-500={currentTheme === 'dark'}>
-              @icp
+              @openmail
             </div>
           {/if}
 

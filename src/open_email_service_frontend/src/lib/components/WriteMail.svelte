@@ -123,7 +123,9 @@
       };
 
       await mailsStore.sendEditedDraftMails(originalMessageId, mail);
-
+      resetForm();
+      close();
+      await goto('/sent');
       error = null;
     } catch (err) {
       error = err;
@@ -164,6 +166,7 @@
 
       resetForm();
       close();
+      await goto('/sent');
     } catch (err) {
       error = err;
       console.error('Error sending edited mail:', err);
@@ -481,7 +484,7 @@
       body: editor.getHTML()
     }));
     
-    goto('/sendMail');
+    goto('/send');
   }
 
   function hasContent() {
