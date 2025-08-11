@@ -215,6 +215,8 @@
 {#each filteredMails as msg, i (msg.id)}
     <div
     class="border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-1.5 flex justify-between items-start group"
+    class:border-gray-300={currentTheme === 'light'}
+    class:border-gray-600={currentTheme === 'dark'}
     class:bg-white={currentTheme === 'light' && (selectedMessage?.id === msg.id || msg.readFlag)}
     class:bg-gray-100={currentTheme === 'light' && selectedMessage?.id !== msg.id && !msg.readFlag}
     class:bg-gray-800={currentTheme === 'dark' && (selectedMessage?.id === msg.id || msg.readFlag)}
@@ -227,7 +229,7 @@
         selectMessage(msg);
       }
     }}
-  >
+>
     <div class="flex flex-1 min-w-0 gap-2">
       {#if msg.profile?.profileImage}
         <img 
