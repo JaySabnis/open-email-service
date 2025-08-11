@@ -34,7 +34,7 @@
 
   <div class="relative z-10 w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 md:p-10">
     <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-4">
-      Welcome to Open Email Services
+      Welcome to Open Email
     </h2>
     <p class="text-gray-600 dark:text-gray-400 mb-6">
       Sign in to access your secure, decentralized inbox.

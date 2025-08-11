@@ -11,7 +11,7 @@
 </script>
 
 {#if $loaderStore.isLoading}
-  <div class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="fixed inset-0 z-100 flex items-center justify-center">
     <div class="absolute inset-0 opacity-50"
          class:bg-gray-900={currentTheme === 'dark'}
          class:bg-gray-700={currentTheme === 'light'}></div>

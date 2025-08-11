@@ -154,4 +154,73 @@ export class MailService {
     const result = await identityActor.restoreEmail(mailId);
     return result;
   }
+
+  async uploadFile(fileData) {
+    const identityActor = await ActorFactory.createIdentityActor(authStore, 
+      "52yko-eaaaa-aaaaa-qauvq-cai"
+      // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+
+    let dto = {
+      filedata: fileData.filedata,
+      contentType: fileData.contentType,
+      fileName: fileData.fileName,
+    };
+
+       console.log("file dto:", fileData,dto);
+
+    const result = await identityActor.uploadFile(dto);
+    return result;
+  }
+
+  async getFileById(fileId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.getFile(fileId);
+    return result;
+  }
+
+  async deleteFile(fileId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.deleteFile(fileId);
+    return result;
+  }
+
+  async deleteDraffMail(draftMailId) {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.deleteDraffMail(draftMailId);
+    return result;
+  }
+
+
+  async sendEditedDraftMails(draftMailId,emailData){
+    const identityActor = await ActorFactory.createIdentityActor(authStore, 
+      "52yko-eaaaa-aaaaa-qauvq-cai"
+      // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+
+    let dto = {
+      to: emailData.to,
+      subject: emailData.subject || null,
+      body: emailData.body,
+      attachmentIds : emailData.attachmentIds || null,
+      isReply: emailData.isReply,
+      parentMailId: emailData.parentMailId || null
+    };
+    console.log("dto in sendEditedDraftMails:", dto,draftMailId);
+
+    const result = await identityActor.editDraftMail(draftMailId,dto);
+    return result;
+  }
 }
