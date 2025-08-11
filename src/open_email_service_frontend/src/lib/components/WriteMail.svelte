@@ -481,7 +481,7 @@
       body: editor.getHTML()
     }));
     
-    goto('/sendMail');
+    goto('/send');
   }
 
   function hasContent() {
