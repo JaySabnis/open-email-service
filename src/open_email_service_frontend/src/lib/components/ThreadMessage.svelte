@@ -32,10 +32,14 @@
 
   async function getFromUser() {
     try {
-      const fromUserResponse = await profileStore.getProfileByUserAddress(
-        message.from
-      );
-      fromUser = fromUserResponse?.ok || null;
+      let fromToUserResponse;
+      if(pageType === "sent" || pageType === "draft") {
+         fromToUserResponse = await profileStore.getProfileByUserAddress(message.to);
+      } else {
+       fromToUserResponse = await profileStore.getProfileByUserAddress(message.from);
+      }
+      
+      fromUser = fromToUserResponse?.ok || null;
 
       if (!fromUser) {
         try {
@@ -203,13 +207,13 @@
             {fromUser?.surname || ""}
           </span>
 
-          <span
-            class="text-xs truncate"
-            class:text-gray-500={currentTheme === "light"}
-            class:text-gray-400={currentTheme === "dark"}
-          >
-            &lt;{message?.from || fromUser?.userAddress}&gt;
-          </span>
+         <span
+          class="text-xs truncate"
+          class:text-gray-500={currentTheme === "light"}
+          class:text-gray-400={currentTheme === "dark"}
+        >
+          &lt;{(pageType === "sent" || pageType === "draft") ? message?.to : message?.from || fromUser?.userAddress}&gt;
+        </span>
 
           <span
             class="text-xs ml-2"
@@ -229,6 +233,7 @@
         {/if}
 
         {#if isOpen}
+        {#if pageType === "draft" || pageType === "sent"}
           <div
             class="text-xs mt-2"
             class:text-gray-600={currentTheme === "light"}
@@ -237,7 +242,17 @@
             <span class="font-medium">To:</span>
             {message?.to || "N/A"}
           </div>
+        {:else}
+          <div
+            class="text-xs mt-2"
+            class:text-gray-600={currentTheme === "light"}
+            class:text-gray-400={currentTheme === "dark"}
+          >
+            <span class="font-medium">From:</span>
+            {message?.from || "N/A"}
+          </div>
         {/if}
+      {/if}
       </div>
     </div>
 
