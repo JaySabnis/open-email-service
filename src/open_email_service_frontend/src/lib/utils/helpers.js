@@ -34,3 +34,10 @@
   return "/user1.png";
 }
 
+export function formatFileSize(bytes) {
+  if (!bytes) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(Number(bytes)) / Math.log(k));
+  return parseFloat((Number(bytes) / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}

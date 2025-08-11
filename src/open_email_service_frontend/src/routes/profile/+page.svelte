@@ -9,6 +9,7 @@
   import { get } from 'svelte/store';
   import { goto } from "$app/navigation"; 
   import { generateImageSrc } from '$lib/utils/helpers';
+  import ConfirmationDialogue from '$lib/components/ConfirmationDialogue.svelte';
   
   let name = '';
   let surname = '';
@@ -29,6 +30,8 @@
   let submitting = false;
   let fullAddress = "";
   const suffix = "@icp";
+  let showDeleteConfirmation = false;
+  let isDeleting = false;
 
   const unsubscribeTheme = theme.subscribe(value => {
     currentTheme = value;
@@ -104,6 +107,22 @@
     } finally {
       submitting = false;
       hideLoader();
+    }
+  }
+
+  async function deleteProfile() {
+    isDeleting = true;
+    try {
+      // await profileStore.deleteProfile();
+
+      showSuccess = true;
+      await logout();
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      error = { message: 'Failed to delete profile' };
+    } finally {
+      isDeleting = false;
+      showDeleteConfirmation = false;
     }
   }
 
@@ -258,6 +277,20 @@
         </svg>
       </button>
 
+      <button
+      on:click|stopPropagation={() => showDeleteConfirmation = true}
+      aria-label="Delete Profile"
+      class="absolute top-4 right-16 p-1 rounded-full hover:bg-opacity-20 transition"
+      class:hover:bg-gray-200={currentTheme === 'light'}
+      class:hover:bg-gray-700={currentTheme === 'dark'}
+      class:text-red-500={true}
+      title="Delete Profile"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    </button>
+
       {#if profileImageUrl}
         <div class="flex-shrink-0">
           <img 
@@ -267,6 +300,18 @@
             class:border-blue-500={currentTheme === 'light'}
             class:border-blue-600={currentTheme === 'dark'}/>
         </div>
+      {/if}
+
+      {#if showDeleteConfirmation}
+        <ConfirmationDialogue
+          title="Delete Profile"
+          message="Are you sure you want to delete your profile? All your data will be permanently removed."
+          confirmText={isDeleting ? 'Deleting...' : 'Delete'}
+          on:confirm={deleteProfile}
+          on:cancel={() => showDeleteConfirmation = false}
+          confirmClass="bg-red-500 hover:bg-red-600 text-white"
+          disabled={isDeleting}
+        />
       {/if}
 
       <div class="flex-grow w-full grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8">
@@ -477,6 +522,11 @@
             class:text-gray-400={currentTheme === 'dark'}>
             Profile Image
           </label>
+          <p class="mt-1 text-sm"
+            class:text-gray-500={currentTheme === 'light'}
+            class:text-gray-400={currentTheme === 'dark'}>
+            Maximum image size: 1.5MB (JPEG, PNG)
+          </p>
         </div>
 
         <div class="relative">

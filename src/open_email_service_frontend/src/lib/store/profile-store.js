@@ -25,13 +25,18 @@ function createProfilStore() {
     return new ProfileService().getProfileByUserAddress(userAddress);
   }
 
+  async function deleteProfile() {
+    return new ProfileService().deleteProfile();
+  }
+
   return {
     createProfile,
     getProfile,
     updateProfile,
     subscribe,
     isUserAddressAvailable,
-    getProfileByUserAddress
+    getProfileByUserAddress,
+    deleteProfile
   };
 }
 

@@ -53,6 +53,26 @@ function mailStore() {
     return new MailService().restoreEmail(mailId);
   }
 
+  async function uploadFile(fileData) {
+    return new MailService().uploadFile(fileData);
+  }
+
+  async function getFileById(fileId) {
+    return new MailService().getFileById(fileId);
+  }
+  
+  async function deleteFile(fileId) {
+    return new MailService().deleteFile(fileId);
+  }
+
+  async function deleteDraffMail(draftMailId) {
+    return new MailService().deleteDraffMail(draftMailId);
+  }
+
+  async function sendEditedDraftMails(draftMailId,emailData) {
+    return new MailService().sendEditedDraftMails(draftMailId,emailData);
+  }
+
   return {
     fetchInboxMails,
     sendEmails,
@@ -66,7 +86,12 @@ function mailStore() {
     fetchDraftMails,
     saveDraftMail,
     deleteEmail,
-    restoreEmail
+    restoreEmail,
+    uploadFile,
+    getFileById,
+    sendEditedDraftMails,
+    deleteFile,
+    deleteDraffMail
   };
 }
 

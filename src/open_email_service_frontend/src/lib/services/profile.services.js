@@ -76,5 +76,15 @@ export class ProfileService {
     const result = await identityActor.getProfileByUserAddress(userAddress);
     return result;
   }
+
+  async deleteProfile() {
+    const identityActor = await ActorFactory.createIdentityActor(
+      authStore,
+      "52yko-eaaaa-aaaaa-qauvq-cai",
+        // "bd3sg-teaaa-aaaaa-qaaba-cai",
+    );
+    const result = await identityActor.deleteProfile();
+    return result;
+  }
   
 }

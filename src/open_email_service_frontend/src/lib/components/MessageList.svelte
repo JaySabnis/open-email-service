@@ -10,8 +10,9 @@
   import { generateImageSrc } from '$lib/utils/helpers';
   import {profileStore} from '$lib/store/profile-store'
   import ConfirmationDialogue from './ConfirmationDialogue.svelte';
-    import { faTrashAlt,faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+  import { faTrashAlt,faRotateLeft } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
+  import { getMails } from '$lib/utils/CommonApi';
   const dispatch = createEventDispatcher();
   export let selectedMessage;
   export let pageType = "inbox";
@@ -27,85 +28,38 @@
   let filteredMails = [];
   let currentTheme = get(theme);
   let showDeleteConfirmation = false;
+  let unselectMessage = false;
+  let messageToDelete = null;
 
-  function selectMessage(msg) {
-    if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
-      dispatch('select', msg);
+    function selectMessage(msg) {
+      if (unselectMessage) {
+        unselectMessage = false;
+        dispatch('select', msg);
+      } else if (!selectedMessage || msg?.id.toString() !== selectedMessage?.id.toString()) {
+        dispatch('select', msg);
+      }
     }
-  }
 
-async function getMails() {
+  async function fetchMails() {
     try {
-      showLoader('Loading Mails...'); 
-      
-      const identity = await authStore.sync();
-      if (!identity?.getPrincipal) {
-        throw new Error("Not authenticated");
-      }
-
-      const pageNumberOpt = [pageNumber];
-      const pageSizeOpt = [pageSize];
-
-      const currentUserProfile = (await profileStore.getProfile())?.ok || null;
-
-      let mailData;
-      switch (pageType) {
-        case "sent":
-          mailData = await mailsStore.fetchOutboxMails(pageNumberOpt, pageSizeOpt);
-          break;
-        case "draft":
-          mailData = await mailsStore.fetchDraftMails(pageNumberOpt, pageSizeOpt);
-          break;
-        case "trash":
-          mailData = await mailsStore.fetchTrashMails(pageNumberOpt, pageSizeOpt);
-          break;
-        case "starred":
-          mailData = await mailsStore.fetchStarredMails(pageNumberOpt, pageSizeOpt);
-          break;
-        default: 
-          mailData = await mailsStore.fetchInboxMails(pageNumberOpt, pageSizeOpt);
-      }
-
-      mails = await Promise.all((mailData?.data || []).map(async (mail) => {
-        try {
-          let profileData = null;
-          
-          if (mail?.from) {
-            const fromUserResponse = await profileStore.getProfileByUserAddress(mail.from);
-            profileData = fromUserResponse?.ok || null;
-          }
-          
-          if (!profileData) {
-            profileData = currentUserProfile;
-          }
-
-          return {
-            ...mail,
-            profile: profileData
-          };
-        } catch (err) {
-          console.error(`Failed to process mail ${mail?.id}`, err);
-          return {
-            ...mail,
-            profile: currentUserProfile 
-          };
-        }
-      }));
-
-      // console.log("Fetched mails with profiles:", mails);
-      hasNextPage = Number(mailData?.totalPages) > pageNumber;
+      showLoader('Loading Mails...');
+      const result = await getMails(pageType, pageNumber, pageSize);
+      mails = result.mails;
+      // console.log("Fetched mails:", mails);
+      hasNextPage = result.hasNextPage;
+      error = result.error;
     } catch (err) {
-      console.error("Failed to fetch mails:", err);
+      console.error("Error in component while fetching mails:", err);
       error = err;
       mails = [];
     } finally {
-      hideLoader(); 
+      hideLoader();
     }
-}
+  }
 
   function handlePageChange(newPage) {
     pageNumber = newPage;
-    getMails();
+    fetchMails();
   }
 
   async function markAsImportant(msgId) { 
@@ -152,11 +106,11 @@ async function getMails() {
    function getParticipant(msg, index) {
     switch (pageType) {
       case "sent":
-        return msg?.to || `Recipient ${index + 1}`;
+        return msg?.from || `Recipient ${index + 1}`;
       case "draft":
-        return msg?.to ? `Draft to: ${msg.to}` : `Unsaved draft ${index + 1}`;
+        return msg?.from ? `Draft to: ${msg.to}` : `Unsaved draft ${index + 1}`;
       case "trash":
-        return msg?.from ? `From: ${msg.from}` : `Deleted message ${index + 1}`;
+        return msg?.from ? `From: ${msg.from}` : `Deleted mail ${index + 1}`;
       case "starred":
         return msg?.from || `Starred sender ${index + 1}`;
       default: // inbox
@@ -164,24 +118,31 @@ async function getMails() {
     }
   }
 
-   function handleDeleteClick() {
+
+  function handleDeleteClick(msg) {
+    messageToDelete = msg.id; 
     showDeleteConfirmation = true;
   }
-  
-  function handleDeleteConfirm(msg) {
+
+  function handleDeleteConfirm() {
     showDeleteConfirmation = false;
-    handleDelete(msg?.id);
+    if (messageToDelete) {
+      unselectMessage=true;
+      handleDelete(messageToDelete);
+      messageToDelete = null; 
+    }
   }
 
   async function handleDelete(messageId) {
     if (!messageId) return;
     
     try {
-      showLoader('Deleting message...');
+      showLoader('Deleting mail...');
       await mailsStore.deleteEmail(messageId);
-      window.location.reload();
+      await fetchMails();
+      unselectMessage = false;
     } catch (err) {
-      console.error("Failed to delete message:", err);
+      console.error("Failed to delete mail:", err);
       error = err;
     } finally {
       hideLoader();
@@ -194,7 +155,8 @@ async function getMails() {
     try {
       showLoader('Restoring Mail...');
       await mailsStore.restoreEmail(messageId);
-      window.location.reload();
+      await fetchMails();
+      unselectMessage = false;
     } catch (err) {
       console.error("Failed to restore mail:", err);
       error = err;
@@ -203,8 +165,8 @@ async function getMails() {
     }
   }
 
-  onMount(async () => {
-    await getMails();
+    onMount(async () => {
+    await fetchMails();
   });
 
   $: filteredMails = searchTerm.trim()
@@ -246,20 +208,25 @@ async function getMails() {
 
   {#if error}
     <div class="text-red-500 text-center p-4">
-      Error loading messages: {error.message}
+      Error loading mails: {error.message}
     </div>
   {:else if filteredMails.length > 0}
     <div class="space-y-4">
-{#each filteredMails as msg, i}
-  <div
+{#each filteredMails as msg, i (msg.id)}
+    <div
     class="border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer p-1.5 flex justify-between items-start group"
-    class:bg-white={currentTheme === 'light' && selectedMessage?.id !== msg.id}
-    class:bg-gray-800={currentTheme === 'dark' && selectedMessage?.id !== msg.id}
+    class:bg-white={currentTheme === 'light' && (selectedMessage?.id === msg.id || msg.readFlag)}
+    class:bg-gray-100={currentTheme === 'light' && selectedMessage?.id !== msg.id && !msg.readFlag}
+    class:bg-gray-800={currentTheme === 'dark' && (selectedMessage?.id === msg.id || msg.readFlag)}
+    class:bg-gray-700={currentTheme === 'dark' && selectedMessage?.id !== msg.id && !msg.readFlag}
     class:bg-blue-50={currentTheme === 'light' && selectedMessage?.id === msg.id}
     class:bg-blue-900={currentTheme === 'dark' && selectedMessage?.id === msg.id}
-    class:border-gray-200={currentTheme === 'light'}
-    class:border-gray-700={currentTheme === 'dark'}
-    on:click={() => selectMessage(msg)}
+    on:click={() => {
+      if (!unselectMessage) {
+        msg.readFlag = true;
+        selectMessage(msg);
+      }
+    }}
   >
     <div class="flex flex-1 min-w-0 gap-2">
       {#if msg.profile?.profileImage}
@@ -286,7 +253,7 @@ async function getMails() {
         <p class="text-xs truncate"
            class:text-gray-600={currentTheme === 'light'}
            class:text-gray-400={currentTheme === 'dark'}>
-          {msg?.subject || 'No Subject'}
+          {msg?.subject || ''}
         </p>
 
         {#if msg?.preview}
@@ -304,7 +271,9 @@ async function getMails() {
     <div
       class="cursor-pointer text-yellow-500 text-sm flex items-center justify-center h-4 w-4"
       on:click|stopPropagation={pageType !== 'trash' && pageType !== 'draft'
-        ? () => msg?.starred ? markAsNotImportant(msg.id) : markAsImportant(msg.id)
+        ? () => {
+          // msg.starred = !msg.starred;
+          msg?.starred ? markAsNotImportant(msg.id) : markAsImportant(msg.id)}
         : null}
     >
       {#if msg?.starred}
@@ -316,19 +285,22 @@ async function getMails() {
 
     {#if pageType !== 'trash'}
       <button
-        on:click|stopPropagation={handleDeleteClick}
-        class="h-4 w-4 flex items-center justify-center"
-        class:text-gray-500={currentTheme === 'light'}
-        class:text-gray-400={currentTheme === 'dark'}
-        class:hover:text-red-500={currentTheme === 'light'}
-        class:hover:text-red-400={currentTheme === 'dark'}
-        title="Delete"
-      >
-        <FontAwesomeIcon icon={faTrashAlt} class="h-4 w-4" />
-      </button>
+          on:click|stopPropagation={() => handleDeleteClick(msg)}
+          class="h-4 w-4 flex items-center justify-center"
+          class:text-gray-500={currentTheme === 'light'}
+          class:text-gray-400={currentTheme === 'dark'}
+          class:hover:text-red-500={currentTheme === 'light'}
+          class:hover:text-red-400={currentTheme === 'dark'}
+          title="Delete"
+        >
+          <FontAwesomeIcon icon={faTrashAlt} class="h-4 w-4" />
+        </button>
     {:else}
       <button
-        on:click|stopPropagation={() => handleRestore(msg.id)}
+        on:click|stopPropagation={(e) => {
+          e.stopPropagation();
+          handleRestore(msg.id);
+        }}
         title="Restore Mail"
         class="h-4 w-4 flex items-center justify-center text-green-600 hover:text-green-800"
       >
@@ -349,16 +321,22 @@ async function getMails() {
     </span>
   </div>
 
-  {#if showDeleteConfirmation}
-    <ConfirmationDialogue
-      title="Delete Message"
-      message="Are you sure you want to delete this message? This action cannot be undone."
-      confirmText="Delete"
-      on:confirm={() => handleDeleteConfirm(msg.id)}
-      on:cancel={() => showDeleteConfirmation = false}
-    />
-  {/if}
-</div>
+    {#if showDeleteConfirmation && messageToDelete === msg.id}
+      <div class="absolute top-0 right-0 z-50 mt-8 mr-2"
+           on:click|stopPropagation>
+        <ConfirmationDialogue
+          title="Delete Mail"
+          message="Are you sure you want to delete this mail?"
+          confirmText="Delete"
+          on:confirm={handleDeleteConfirm}
+          on:cancel={() => {
+            showDeleteConfirmation = false;
+            messageToDelete = null;
+          }}
+        />
+      </div>
+    {/if}
+  </div>
   </div>
 {/each}
       <Pagination
