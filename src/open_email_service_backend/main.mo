@@ -14,20 +14,20 @@ import EmailManager "/managers/EmailManager";
 import EmailCommands "commands/EmailCommands";
 import EmailQueries "queries/EmailQueries";
 
-actor {
+persistent actor {
 
-  stable var stable_profile : [(Principal, ProfileType.Profile)] = [];
-  stable var stable_userAddressStore : [(Text, Principal)] = [];
-  stable var stable_emailStore : [(Text, EmailTypes.Email)] = [];
-  stable var stable_registries : [(Principal, EmailTypes.EmailRegistry)] = [];
-  stable var stable_fileStore : [(Text, EmailTypes.File)] = [];
-  stable var stable_threads : [(Text, EmailTypes.Thread)] = [];
-  
+  var stable_profile : [(Principal, ProfileType.Profile)] = [];
+  var stable_userAddressStore : [(Text, Principal)] = [];
+  var stable_emailStore : [(Text, EmailTypes.Email)] = [];
+  var stable_registries : [(Principal, EmailTypes.LegacyEmailRegistry)] = [];
+  var stable_fileStore : [(Text, EmailTypes.File)] = [];
+  var stable_threads : [(Text, EmailTypes.Thread)] = [];
+
   //profile manager
-  let profileService = ProfileManager.ProfileManager();
+  private transient let profileService = ProfileManager.ProfileManager();
 
   //Email Manager
-  let emailManager = EmailManager.EmailManager();
+  private transient let emailManager = EmailManager.EmailManager();
 
   //create profile
   public shared ({ caller }) func createProfile(profile : ProfileCommands.CreateProfileDTO) : async Result.Result<(), ProfileType.ProfileError> {
@@ -129,7 +129,7 @@ actor {
     assert not Principal.isAnonymous(caller);
     return await emailManager.deleteFromDrafts(caller, draftId);
   };
-  
+
   //todo create on fucntion instead of multiple to fetch emails.
   public shared ({ caller }) func fetchInboxMails(pageNumber : ?Nat, pageSize : ?Nat) : async EmailQueries.PaginatedEmailBodyResponseDTO {
     assert not Principal.isAnonymous(caller);
