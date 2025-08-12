@@ -70,38 +70,37 @@
     }
   }
 
-  async function fetchMails() {
-    try {
-      showLoader('Loading Mails...');
-      const result = await getMails(pageType, pageNumber, pageSize);
-      mails = result.mails;
-      hasNextPage = result.hasNextPage;
-      error = result.error;
-      console.log("Fetched mails:", mails);
-      if (pageType === 'sent' || pageType === 'draft') {
-        await Promise.all(mails.map(async msg => {
-          if (msg.to) {
-            const cacheKey = `to_${msg.to}`;
-            if (profilesCache[cacheKey] === undefined) {
-              try {
-                const response = await profileStore.getProfileByUserAddress(msg.to);
-                profilesCache[cacheKey] = response?.ok || null;
-              } catch (err) {
-                console.error("Error pre-fetching profile:", err);
-                profilesCache[cacheKey] = null;
-              }
-            }
+async function fetchMails() {
+  try {
+    showLoader('Loading Mails...');
+    const result = await getMails(pageType, pageNumber, pageSize);
+    mails = result.mails;
+    hasNextPage = result.hasNextPage;
+    error = result.error;
+    console.log("Fetched mails:", mails);
+    
+    hideLoader();
+    
+    if (pageType === 'sent' || pageType === 'draft') {
+      Promise.all(mails.map(async msg => {
+        if (msg.to && profilesCache[`to_${msg.to}`] === undefined) {
+          try {
+            const response = await profileStore.getProfileByUserAddress(msg.to);
+            profilesCache[`to_${msg.to}`] = response?.ok || null;
+          } catch (err) {
+            console.error("Error pre-fetching profile:", err);
+            profilesCache[`to_${msg.to}`] = null;
           }
-        }));
-      }
-    } catch (err) {
-      console.error("Error in component while fetching mails:", err);
-      error = err;
-      mails = [];
-    } finally {
-      hideLoader();
+        }
+      })).catch(console.error);
     }
+  } catch (err) {
+    console.error("Error in component while fetching mails:", err);
+    error = err;
+    mails = [];
+    hideLoader();
   }
+}
 
   function handlePageChange(newPage) {
     pageNumber = newPage;
