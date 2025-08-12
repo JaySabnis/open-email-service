@@ -87,7 +87,7 @@
         const createData = {
           name: name,
           surname: surname,
-          userAddress: userAddress,
+          userAddress: fullAddress,
           status: opt(status),
           description: opt(description),
           profileImage: newProfileImageArray.length ? opt(newProfileImageArray) : []
@@ -448,7 +448,7 @@
             id="address"
             type="text"
             bind:value={userAddress}
-            placeholder=" "
+            placeholder="Mail Address"
             disabled={profile}
             on:input={onAddressInput}
             class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent
@@ -477,7 +477,7 @@
                   peer-focus:top-2 peer-focus:text-sm peer-focus:font-medium"
             class:text-gray-500={currentTheme === 'light'}
             class:text-gray-400={currentTheme === 'dark'}>
-            Address
+            Mail Address
           </label>
           <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none">
             {#if addressValid === true}

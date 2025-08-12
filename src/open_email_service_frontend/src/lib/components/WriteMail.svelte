@@ -14,6 +14,7 @@
   import Underline from '@tiptap/extension-underline';
   import TextStyle from '@tiptap/extension-text-style';
   import Color from '@tiptap/extension-color';
+  import {getMails} from "$lib/utils/CommonApi";
   const dispatch = createEventDispatcher();
 
   export let to = "";
@@ -199,8 +200,14 @@
       };
 
       await mailsStore.sendEmails(mail);
+
+      if(isReply){
+        window.location.reload();
+      } else {
+        await goto('/sent');
+        await getMails('sent');
+      }
       
-      resetForm();
       close();
     } catch (err) {
       error = err;
