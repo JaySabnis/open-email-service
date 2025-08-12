@@ -15,6 +15,8 @@
   import {getMails} from "$lib/utils/CommonApi";
   import ConfirmationDialogue from "./ConfirmationDialogue.svelte";
   import { goto } from '$app/navigation';
+  import DOMPurify from 'dompurify';
+
   
   export let message;
   export let isFirst = false;
@@ -28,6 +30,7 @@
   let isOpen = isFirst;
   export let close;
   let showEditModal = false;
+  let isStarred = message?.starred || false;
   
 
   async function getFromUser() {
@@ -129,11 +132,12 @@
   async function markAsImportant(msgId) {
     try {
       showLoader("Marking important...");
+      isStarred = true; // Immediate UI update
       const msg = await mailsStore.markItAsImportant(msgId);
-      // window.location.reload();
+      close();
     } catch (err) {
-      console.error("Failed to mark as important", error);
-      error = err;
+      isStarred = false; // Revert on error
+      console.error("Failed to mark as important", err);
     } finally {
       hideLoader();
     }
@@ -142,17 +146,35 @@
   async function markAsNotImportant(msgId) {
     try {
       showLoader("Marking as Unimportant...");
+      isStarred = false; // Immediate UI update
       const msg = await mailsStore.markAsNotImportant(msgId);
-      // window.location.reload();
+      close();
     } catch (err) {
-      console.error("Failed to mark as unimportant", error);
-      error = err;
+      isStarred = true; // Revert on error
+      console.error("Failed to mark as unimportant", err);
     } finally {
       hideLoader();
     }
   }
 
+  function sanitizeHtml(html) {
+    if (!html) return '';
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'em', 'u', 's', 'blockquote',
+        'ol', 'ul', 'li', 'a',
+        'div', 'span', 'br', 'hr',
+        'table', 'thead', 'tbody', 'tr', 'td', 'th',
+        'img'
+      ],
+      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt'],
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|ftp|tel):|#)/i
+    });
+  }
+
   $: if (message) {
+    isStarred = message.starred;
     getFromUser();
   }
 </script>
@@ -261,15 +283,13 @@
         {#if pageType !== "draft"}
           <div
             class="cursor-pointer text-yellow-500"
-            on:click|stopPropagation={pageType !== "trash" &&
-            pageType !== "draft"
-              ? () =>
-                  message?.starred
-                    ? markAsNotImportant(message?.id)
-                    : markAsImportant(message?.id)
-              : null}
-          >
-            {#if message?.starred}
+            on:click|stopPropagation={pageType !== "trash" && pageType !== "draft"
+          ? () =>
+              isStarred
+                ? markAsNotImportant(message?.id)
+                : markAsImportant(message?.id)
+          : null}>
+            {#if isStarred}
               ★
             {:else}
               ☆
@@ -358,13 +378,13 @@
         <div
           class="cursor-pointer text-yellow-500"
           on:click|stopPropagation={pageType !== "trash" && pageType !== "draft"
-            ? () =>
-                message?.starred
-                  ? markAsNotImportant(message?.id)
-                  : markAsImportant(message?.id)
-            : null}
-        >
-          {#if message?.starred}
+              ? () =>
+                  isStarred
+                    ? markAsNotImportant(message?.id)
+                    : markAsImportant(message?.id)
+              : null}
+          >
+          {#if isStarred}
             ★
           {:else}
             ☆
@@ -404,12 +424,8 @@
       class:bg-white={currentTheme === "light"}
       class:bg-gray-900={currentTheme === "dark"}
     >
-      <div
-        class="whitespace-pre-line text-sm leading-relaxed"
-        class:text-gray-800={currentTheme === "light"}
-        class:text-gray-200={currentTheme === "dark"}
-      >
-        {message?.body || "No content"}
+      <div class="message-content" class:text-gray-800={currentTheme === "light"} class:text-gray-200={currentTheme === "dark"}>
+        {@html sanitizeHtml(message?.body) || "No content"}
       </div>
 
       {#if message?.attachments?.filter(a => a[0]?.fileId).length > 0}
@@ -626,3 +642,34 @@
         />
       </div>
 {/if}
+
+<style>
+  .message-content {
+    line-height: 1.6;
+  }
+  .message-content p {
+    margin-bottom: 1em;
+  }
+  .message-content ul,
+  .message-content ol {
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+  .message-content a {
+    color: #3b82f6;
+    text-decoration: underline;
+  }
+  .message-content blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1em;
+    margin-left: 0;
+    color: #6b7280;
+  }
+  .dark .message-content a {
+    color: #93c5fd;
+  }
+  .dark .message-content blockquote {
+    border-left-color: #4b5563;
+    color: #9ca3af;
+  }
+</style>

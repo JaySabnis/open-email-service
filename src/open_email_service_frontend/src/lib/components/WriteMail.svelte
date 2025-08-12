@@ -483,7 +483,8 @@
       subject,
       body: editor.getHTML()
     }));
-    
+
+    close();
     goto('/send');
   }
 
