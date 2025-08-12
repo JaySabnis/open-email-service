@@ -222,21 +222,24 @@ module {
 
             if (email.isReply and emailType == "inbox") {
               let parentMailId:Text= Option.get(email.parentMailId,"");
-              switch(emailStore.get(parentMailId)){
-                case(?parentMail){
-                    let responseEmail : EmailQueries.EmailResponseDTO = {
-                      id = parentMailId;
-                      from = email.from;
-                      to = email.to;
-                      preview = utils.subText(email.body, 0, 100);
-                      subject = Text.concat("RE: [Follow-up on earlier email] ", Option.get(parentMail.subject, noSubject));
-                      createdOn = email.createdOn;
-                      starred = emailType == "important";
-                      readFlag = isOutboxRequest or reg.openedMails.get(emailId) == ?true;
-                    };
-                    emails.add(responseEmail);
-                };
-                case null {};
+              let ifParentInTrash:?T.TrashMetaData=reg.trash.get(parentMailId);
+              if(ifParentInTrash==null){
+                switch(emailStore.get(parentMailId)){
+                  case(?parentMail){
+                      let responseEmail : EmailQueries.EmailResponseDTO = {
+                        id = parentMailId;
+                        from = email.from;
+                        to = email.to;
+                        preview = utils.subText(email.body, 0, 100);
+                        subject = Text.concat("RE: [Follow-up on earlier email] ", Option.get(parentMail.subject, noSubject));
+                        createdOn = email.createdOn;
+                        starred = emailType == "important";
+                        readFlag = isOutboxRequest or reg.openedMails.get(emailId) == ?true;
+                      };
+                      emails.add(responseEmail);
+                  };
+                  case null {};
+                }
               }
               
             };
