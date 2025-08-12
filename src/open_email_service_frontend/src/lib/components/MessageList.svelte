@@ -13,6 +13,9 @@
   import { faTrashAlt,faRotateLeft,faSyncAlt } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'
   import { getMails } from '$lib/utils/CommonApi';
+  import DOMPurify from 'dompurify';
+
+
   const dispatch = createEventDispatcher();
   export let selectedMessage;
   export let pageType = "inbox";
@@ -105,19 +108,21 @@
     fetchMails();
   }
 
-    async function markAsImportant(msgId) { 
+  async function markAsImportant(msgId) { 
     try {
-      mails = mails.map(msg => 
-        msg.id === msgId ? {...msg, starred: true} : msg
-      );
-      
       showLoader('Marking important...'); 
       await mailsStore.markItAsImportant(msgId);
+      
+      dispatch('close');
       await fetchMails();
+      
+      const updatedMsg = mails.find(m => m.id === msgId);
+      if (updatedMsg) {
+        setTimeout(() => {
+          dispatch('select', updatedMsg);
+        }, 50);
+      }
     } catch (err) {
-      mails = mails.map(msg => 
-        msg.id === msgId ? {...msg, starred: false} : msg
-      );
       console.error("Failed to mark as important", err);
       error = err;
     } finally {
@@ -127,17 +132,19 @@
 
   async function markAsNotImportant(msgId) { 
     try {
-      mails = mails.map(msg => 
-        msg.id === msgId ? {...msg, starred: false} : msg
-      );
-      
       showLoader('Marking as Unimportant...'); 
       await mailsStore.markAsNotImportant(msgId);
+      
+      dispatch('close');
       await fetchMails();
+
+      const updatedMsg = mails.find(m => m.id === msgId);
+      if (updatedMsg) {
+        setTimeout(() => {
+          dispatch('select', updatedMsg);
+        }, 50);
+      }
     } catch (err) {
-      mails = mails.map(msg => 
-        msg.id === msgId ? {...msg, starred: true} : msg
-      );
       console.error("Failed to mark as unimportant", err);
       error = err;
     } finally {
@@ -196,6 +203,7 @@
     try {
       showLoader('Deleting mail...');
       await mailsStore.deleteEmail(messageId);
+      dispatch('close');
       await fetchMails();
       unselectMessage = false;
     } catch (err) {
@@ -212,6 +220,7 @@
     try {
       showLoader('Restoring Mail...');
       await mailsStore.restoreEmail(messageId);
+      dispatch('close');
       await fetchMails();
       unselectMessage = false;
     } catch (err) {
@@ -225,6 +234,27 @@
   async function reloadData() {
     pageNumber = 1; 
     await fetchMails();
+  }
+
+  function sanitizeHtml(html) {
+    if (!html) return '';
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'em', 'u', 's', 'blockquote',
+        'ol', 'ul', 'li', 'a',
+        'div', 'span', 'br', 'hr',
+        'table', 'thead', 'tbody', 'tr', 'td', 'th',
+        'img'
+      ],
+      ALLOWED_ATTR: ['style', 'class', 'href', 'target', 'rel', 'src', 'alt'],
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|ftp|tel):|#)/i
+    });
+  }
+
+  function getPlainTextPreview(html) {
+    if (!html) return '';
+    return html.replace(/<[^>]*>/g, '');
   }
 
     onMount(async () => {
@@ -356,11 +386,9 @@
     </p>
 
     {#if msg?.preview}
-      <p class="text-xs truncate text-gray-500 mt-0.5"
-         class:text-gray-500={currentTheme === 'light'}
-         class:text-gray-300={currentTheme === 'dark'}>
-        {msg?.preview}
-      </p>
+      <div class="message-preview line-clamp-2" title={getPlainTextPreview(msg?.preview)} class:text-gray-500={currentTheme === "light"} class:text-gray-300={currentTheme === "dark"}>
+        {@html sanitizeHtml(msg?.preview) || "No content"}
+      </div>
     {/if}
   </div>
 </div>
@@ -454,3 +482,41 @@
     </p>
   {/if}
 </div>
+
+<style>
+  .message-preview {
+    line-height: 1.6;
+    font-size: 12px;
+  }
+  .message-preview p {
+    margin-top: 2px;
+  }
+  .message-preview ul,
+  .message-preview ol {
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+  .message-preview a {
+    color: #3b82f6;
+    text-decoration: underline;
+  }
+  .message-preview blockquote {
+    border-left: 3px solid #e5e7eb;
+    padding-left: 1em;
+    margin-left: 0;
+    color: #6b7280;
+  }
+  .dark .message-preview a {
+    color: #93c5fd;
+  }
+  .dark .message-preview blockquote {
+    border-left-color: #4b5563;
+    color: #9ca3af;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

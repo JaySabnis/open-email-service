@@ -24,6 +24,7 @@
   <div class={selectedMessage ? "w-[30%]" : "w-full"} key={messageListKey}>
     <MessageList 
       on:select={handleSelect} 
+      on:close={handleClose}
       selectedMessage={selectedMessage}
       pageType={pageType} 
     />

@@ -113,7 +113,7 @@
   async function deleteProfile() {
     isDeleting = true;
     try {
-      // await profileStore.deleteProfile();
+      await profileStore.deleteProfile();
 
       showSuccess = true;
       await logout();
@@ -355,7 +355,7 @@
           <p class="text-xs uppercase font-semibold"
              class:text-gray-500={currentTheme === 'light'}
              class:text-gray-400={currentTheme === 'dark'}>Description</p>
-          <p class="text-md"
+          <p class="text-md font-medium"
              class:text-gray-900={currentTheme === 'light'}
              class:text-gray-100={currentTheme === 'dark'}>{profile?.description || '-'}</p>
         </div>
@@ -396,7 +396,7 @@
             bind:value={name}
             placeholder=" "
             required
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
+            class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
             class:text-gray-900={currentTheme === 'light'}
@@ -423,7 +423,7 @@
             bind:value={surname}
             placeholder=" "
             required
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
+            class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
             class:text-gray-900={currentTheme === 'light'}
@@ -451,7 +451,7 @@
             placeholder=" "
             disabled={profile}
             on:input={onAddressInput}
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent
+            class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent
                   focus:outline-none focus:ring-2 pr-16 disabled:opacity-70 disabled:cursor-not-allowed transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
@@ -504,7 +504,7 @@
             accept="image/*"
             on:change={handleImageUpload}
             placeholder=" "
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
+            class="peer border w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
             class:text-gray-900={currentTheme === 'light'}
@@ -535,7 +535,7 @@
             type="text"
             bind:value={status}
             placeholder=" "
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
+            class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent focus:outline-none focus:ring-2 transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
             class:text-gray-900={currentTheme === 'light'}
@@ -561,7 +561,7 @@
             rows="3"
             bind:value={description}
             placeholder=" "
-            class="peer w-full rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent resize-none focus:outline-none focus:ring-2 transition"
+            class="peer w-full border rounded-md px-4 pt-5 pb-2 text-lg font-medium placeholder-transparent resize-none focus:outline-none focus:ring-2 transition"
             class:bg-white={currentTheme === 'light'}
             class:bg-gray-700={currentTheme === 'dark'}
             class:text-gray-900={currentTheme === 'light'}
